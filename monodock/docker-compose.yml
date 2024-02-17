@@ -39,6 +39,16 @@ services:
     networks:
       - worldcoin
 
+  anvil:
+    build:
+      context: .  # Set the Docker context to the current directory
+      dockerfile: Dockerfile.anvil  # Specify the custom Dockerfile name
+    ports:
+      - "8545:8545"
+    # get the initial state for the worldcoin contracts via volumes:
+    networks:
+      - worldcoin
+
   rust-tracing-otlp:
     build:
       context: .  # Set the Docker context to the current directory
