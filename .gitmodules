@@ -1,0 +1,3 @@
+[submodule "monodock/rust-tracing-otlp"]
+	path = monodock/rust-tracing-otlp
+	url = https://github.com/tekul/rust-tracing-otlp.git

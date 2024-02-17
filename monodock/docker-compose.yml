@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  jaeger: # observability
+    image: jaegertracing/all-in-one:latest
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - 16686:16686 # UI
+      - 4317:4317 # OTLP collector gRPC
+      - 4318:4318 # OTLP collector HTTP/protobuf
+    networks:
+      - worldcoin
+
+  tx-sitter-db:
+    image: postgres:latest
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - tx-sitter-db-data:/var/lib/postgresql/data
+    networks:
+      - worldcoin
+
+  signup-sequencer-db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - signup-sequencer-db-data:/var/lib/postgresql/data
+    networks:
+      - worldcoin
+
+  rust-tracing-otlp:
+    build:
+      context: .  # Set the Docker context to the current directory
+      dockerfile: Dockerfile.rust-tracing-otlp  # Specify the custom Dockerfile name
+    ports:
+      - "8081:8080"
+    environment: # do I have to setup these again?
+      OTEL_SERVICE_NAME: sample
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      RUST_LOG: "debug,h2=warn"
+    # volumes:
+    #  - ./rust-tracing-otlp:/usr/src/myapp  # Adjust the path as necessary
+    networks:
+      - worldcoin
+
+networks:
+  worldcoin:
+    driver: bridge
+
+volumes:
+  tx-sitter-db-data:
+  signup-sequencer-db-data:
