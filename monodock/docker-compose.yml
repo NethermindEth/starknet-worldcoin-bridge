@@ -45,7 +45,8 @@ services:
       dockerfile: Dockerfile.anvil  # Specify the custom Dockerfile name
     ports:
       - "8545:8545"
-    # get the initial state for the worldcoin contracts via volumes:
+    volumes:
+      - ./anvil-chains:/chains
     networks:
       - worldcoin
 
