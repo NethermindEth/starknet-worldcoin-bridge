@@ -1,3 +1,6 @@
 [submodule "monodock/rust-tracing-otlp"]
 	path = monodock/rust-tracing-otlp
 	url = https://github.com/tekul/rust-tracing-otlp.git
+[submodule "monodock/tx-sitter-monolith"]
+	path = monodock/tx-sitter-monolith
+	url = https://github.com/tkstanczak/tx-sitter-monolith.git

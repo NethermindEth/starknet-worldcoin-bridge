@@ -1,6 +1,25 @@
 version: "3.8"
 
 services:
+  sleep-10:
+    image: alpine
+    command: /bin/sh -c "sleep 10 && exit 0"
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 1
+  anvil:
+    build:
+      context: .  # Set the Docker context to the current directory
+      dockerfile: Dockerfile.anvil  # Specify the custom Dockerfile name
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./anvil-chains:/chains
+    networks:
+      - worldcoin
+
   jaeger: # observability
     image: jaegertracing/all-in-one:latest
     environment:
@@ -39,30 +58,24 @@ services:
     networks:
       - worldcoin
 
-  anvil:
+  rust-tx-sitter:
     build:
       context: .  # Set the Docker context to the current directory
-      dockerfile: Dockerfile.anvil  # Specify the custom Dockerfile name
+      dockerfile: Dockerfile.tx-sitter  # Specify the custom Dockerfile name
+    depends_on:
+      anvil:
+        condition: service_started
+      tx-sitter-db:
+        condition: service_started
+      sleep-10:
+        condition: service_completed_successfully
     ports:
-      - "8545:8545"
-    volumes:
-      - ./anvil-chains:/chains
-    networks:
-      - worldcoin
-
-  rust-tracing-otlp:
-    build:
-      context: .  # Set the Docker context to the current directory
-      dockerfile: Dockerfile.rust-tracing-otlp  # Specify the custom Dockerfile name
-    ports:
-      - "8081:8080"
+      - "3000:3000"
     environment: # do I have to setup these again?
-      OTEL_SERVICE_NAME: sample
+      OTEL_SERVICE_NAME: tx-sitter
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       RUST_LOG: "debug,h2=warn"
-    # volumes:
-    #  - ./rust-tracing-otlp:/usr/src/myapp  # Adjust the path as necessary
     networks:
       - worldcoin
 
