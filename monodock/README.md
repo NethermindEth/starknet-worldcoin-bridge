@@ -5,7 +5,7 @@
 - [x] add anvil
 - [x] init anvil state with predeployed smart contracts (--load-state --dump-state)
 - [x] add keys volume from the contract-deployer
-- [ ] add tx-sitter
+- [x] add tx-sitter
 - [ ] add signup-sequencer
 - [ ] (explore) add PostgreSQL to OpenTelemetry
 - [ ] add waiting logic for the DB
