@@ -4,3 +4,9 @@
 [submodule "monodock/tx-sitter-monolith"]
 	path = monodock/tx-sitter-monolith
 	url = https://github.com/tkstanczak/tx-sitter-monolith.git
+[submodule "monodock/world-tree"]
+	path = monodock/world-tree
+	url = https://github.com/worldcoin/world-tree.git
+[submodule "monodock/world-id-state-bridge"]
+	path = monodock/world-id-state-bridge
+	url = https://github.com/worldcoin/world-id-state-bridge.git
