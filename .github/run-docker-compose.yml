@@ -1,0 +1,38 @@
+name: Docker Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name'
+        required: true
+        default: 'feat/github_workflow'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Update submodules
+        run: git submodule update --init --recursive
+
+      - name: Check if Docker is installed
+        run: |
+          if ! command -v docker &> /dev/null
+          then
+              apt-get update
+              apt-get install -y docker.io
+              apt-get install -y docker-compose
+          fi
+
+      - name: Change directory to Docker Compose folder
+        run: cd monodock
+
+      - name: Run docker-compose
+        run: docker-compose up -d
+
+      - name: Check Docker containers
+        run: ./scripts/check_containers.sh
