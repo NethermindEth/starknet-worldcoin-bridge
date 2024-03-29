@@ -28,6 +28,12 @@ services:
       - 16686:16686 # UI
       - 4317:4317 # OTLP collector gRPC
       - 4318:4318 # OTLP collector HTTP/protobuf
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-S", "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - worldcoin
 
@@ -42,6 +48,11 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - tx-sitter-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - worldcoin
 
@@ -55,6 +66,11 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - signup-sequencer-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - worldcoin
 

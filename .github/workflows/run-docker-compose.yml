@@ -1,16 +1,13 @@
 name: Docker Deployment
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch name'
-        required: true
-        #will change the default branch to main once its merged to main branch
-        default: 'feat/github_workflow'
+  push:
+    #will change the default branch to main once its merged to main branch
+    branches:
+      - feat/github_workflow
 
 jobs:
   build:
-    name: Builing CI pipeling on Ubuntu OS
+    name: Building CI pipeline on Ubuntu OS
     runs-on: ubuntu-latest
 
     steps:
@@ -35,9 +32,9 @@ jobs:
       - name: Run docker-compose
         run: docker-compose up -d
 
-      - name: Sleep for 60 second for waiting container to intialize the processing
+      - name: Sleep for 60 seconds for waiting container to initialize the processing
         run: |
           sleep 60s
-         
-      - name: Check Running and Exit Status for Docker containers 
+
+      - name: Check Running and Exit Status for Docker containers
         run: ./scripts/check_containers.sh
