@@ -3,7 +3,7 @@ on:
   push:
     #will change the default branch to main once its merged to main branch
     branches:
-      - feat/github_workflow
+      - feat/github-workflow
 
 jobs:
   build:
