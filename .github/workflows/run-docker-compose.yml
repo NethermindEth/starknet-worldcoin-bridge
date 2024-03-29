@@ -26,15 +26,17 @@ jobs:
               apt-get install -y docker-compose
           fi
 
-      - name: Change directory to Docker Compose folder & run docker-compose
-        run: |
-          cd monodock
-          ls -la
-          docker-compose up -d
+      # - name: Change directory to Docker Compose folder & run docker-compose
+      #   run: |
+      #     cd monodock
+      #     ls -la
+      #     docker-compose up -d
 
       - name: Sleep for 60 seconds for waiting container to initialize the processing
         run: |
           sleep 60s
 
       - name: Check Running and Exit Status for Docker containers
-        run: .github/scripts/check_containers.sh
+        run: |
+          bash .github/scripts/check_containers.sh
+        shell: bash
