@@ -37,4 +37,4 @@ jobs:
           sleep 60s
 
       - name: Check Running and Exit Status for Docker containers
-        run: ./scripts/check_containers.sh
+        run: .github/scripts/check_containers.sh
