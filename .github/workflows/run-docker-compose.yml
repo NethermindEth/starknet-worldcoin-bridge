@@ -27,7 +27,9 @@ jobs:
           fi
 
       - name: Change directory to Docker Compose folder
-        run: cd monodock
+        run: |
+          cd monodock
+          ls -la
 
       - name: Run docker-compose
         run: docker-compose up -d
