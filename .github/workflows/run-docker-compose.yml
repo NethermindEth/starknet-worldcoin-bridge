@@ -26,13 +26,11 @@ jobs:
               apt-get install -y docker-compose
           fi
 
-      - name: Change directory to Docker Compose folder
+      - name: Change directory to Docker Compose folder & run docker-compose
         run: |
           cd monodock
           ls -la
-
-      - name: Run docker-compose
-        run: docker-compose up -d
+          docker-compose up -d
 
       - name: Sleep for 60 seconds for waiting container to initialize the processing
         run: |
