@@ -1,0 +1,1 @@
+{"version":1,"contracts":[{"id":"c01b10labltnq","package_name":"state_bridge","contract_name":"StarkWorldID","module_path":"state_bridge::StarkWorldID::StarkWorldID","artifacts":{"sierra":"state_bridge_StarkWorldID.contract_class.json","casm":null}}]}
