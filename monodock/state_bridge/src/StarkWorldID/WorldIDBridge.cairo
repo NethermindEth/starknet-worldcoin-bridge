@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 /// @title WorldID Interface
-/// @author Nethermind
+/// @author Worldcoin
 /// @notice The interface to the Semaphore Groth16 proof verification for WorldID.
 #[starknet::interface]
 trait IWorldIDExt<TContractState> {
@@ -22,7 +22,11 @@ trait IWorldIDExt<TContractState> {
     fn get_tree_depth(self: @TContractState) -> u8;
 }
 
-// SemaphoreTreeDepthValidator 
+/// SemaphoreTreeDepthValidator 
+/// @notice Checks if the provided `treeDepth` is among supported depths.
+///
+/// @param treeDepth The tree depth to validate.
+/// @return supportedDepth Returns `true` if `treeDepth` is between 16 and 32
 #[external(v0)]
 fn validate(tree_depth: u8) -> bool {
     let min_depth: u8 = 16;
@@ -31,7 +35,7 @@ fn validate(tree_depth: u8) -> bool {
 }
 
 #[starknet::component]
-mod WorldID {
+pub mod WorldID {
     // TODO: Add Semaphore Verifier
     use super::validate;
     use starknet::get_block_timestamp;
@@ -73,7 +77,7 @@ mod WorldID {
     ///////////////////////////////////////////////////////////////////////////////
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         root_added: RootAdded,
         root_history_expiry_set: RootHistoryExpirySet,
     }
