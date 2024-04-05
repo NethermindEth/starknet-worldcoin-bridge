@@ -8,6 +8,7 @@ mod StarkWorldID {
     use super::world_id_bridge::WorldID;
     use super::interface_stark_world_id;
     use openzeppelin::access::ownable::OwnableComponent;
+    use starknet::get_caller_address;
 
     component!(path: WorldID, storage: world_id_storage, event: WorldIDEvent);
     component!(path: OwnableComponent , storage: ownable_storage, event: OwnableEvent);
@@ -16,10 +17,14 @@ mod StarkWorldID {
     // External Components
     #[abi(embed_v0)]
     impl WorldIDImpl = WorldID::WorldIDImpl<ContractState>;
+    #[abi(embed_v0)]
     impl WorldIDImplVerify = WorldID::WorldIDImplVerify<ContractState>;
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>; 
 
     // Internal Components
     impl WorldIDInternalImpl = WorldID::InternalImpl<ContractState>; 
+    impl OwnableInernalImpl = OwnableComponent::InternalImpl<ContractState>; 
 
     #[storage]
     struct Storage {
@@ -39,6 +44,7 @@ mod StarkWorldID {
 
     #[constructor]
     fn constructor(ref self: ContractState, tree_depth: u8) {
+        self.ownable_storage.initializer(get_caller_address()); // msg.sender equivalent
         self.world_id_storage._intialize(tree_depth); 
     }
 
@@ -60,6 +66,7 @@ mod StarkWorldID {
         /// @custom:reverts CannotOverwriteRoot If the root already exists in the root history.
         /// @custom:reverts string If the caller is not the owner.
         fn receive_root(ref self: ContractState, new_root: u256) {
+            self.ownable_storage.assert_only_owner(); // onlyOwner
             self.world_id_storage._receive_root(new_root); 
         }
 
@@ -73,6 +80,7 @@ mod StarkWorldID {
         ///
         /// @custom:reverts string If the caller is not the owner.
         fn set_root_history_expiry(ref self: ContractState, expiry_time: u256) {
+            self.ownable_storage.assert_only_owner(); // onlyOwner
             self.world_id_storage._set_root_history_expiry(expiry_time); 
         }
 
