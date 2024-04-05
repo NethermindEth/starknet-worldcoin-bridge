@@ -1,1 +1,1 @@
-mod StarkWorldID;
+mod stark_world_id;

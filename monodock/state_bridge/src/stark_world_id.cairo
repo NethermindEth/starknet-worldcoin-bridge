@@ -1,19 +1,19 @@
-mod IStarkWorldID;
-mod ICrossDomainOwnable3;
-mod IWorldIDBridge;
-mod WorldIDBridge; 
+mod interface_stark_world_id;
+mod interface_crossdomain_ownable3;
+mod world_id_bridge; 
 
 //  TODO: Add ownerOnly
 #[starknet::contract]
 mod StarkWorldID {
-    use super::WorldIDBridge::WorldID;
-    use super::IStarkWorldID;
+    use super::world_id_bridge::WorldID;
+    use super::interface_stark_world_id;
 
     component!(path: WorldID, storage: world_id_storage, event: WorldIDEvent);
 
     // External Components
     #[abi(embed_v0)]
     impl WorldIDImpl = WorldID::WorldIDImpl<ContractState>;
+    impl WorldIDImplVerify = WorldID::WorldIDImplVerify<ContractState>;
 
     // Internal Components
     impl WorldIDInternalImpl = WorldID::InternalImpl<ContractState>; 
@@ -35,7 +35,7 @@ mod StarkWorldID {
         self.world_id_storage._intialize(tree_depth); 
     }
 
-    impl StarkWorldID of IStarkWorldID::IStarkWorldID<ContractState> {
+    impl StarkWorldID of interface_stark_world_id::IStarkWorldID<ContractState> {
         ///////////////////////////////////////////////////////////////////////////////
         ///                               ROOT MIRRORING                            ///
         ///////////////////////////////////////////////////////////////////////////////

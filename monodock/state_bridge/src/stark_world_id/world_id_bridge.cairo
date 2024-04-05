@@ -1,18 +1,12 @@
 use starknet::ContractAddress;
+mod interface_world_id;
+mod semaphore_tree_depth_validator;
 
-/// @title WorldID Interface
-/// @author Worldcoin
-/// @notice The interface to the Semaphore Groth16 proof verification for WorldID.
+/// @title WorldIDBridge Interface
+/// @author Nethermind
+/// @dev Interfaces that will be exposed externally 
 #[starknet::interface]
 trait IWorldIDExt<TContractState> {
-
-    fn verify_proof(self: @TContractState,
-        root: u256,
-        signalHash: u256,
-        nullifierHash: u256,
-        externalNullifierHash: u256,
-        proof: Array<u256>);
-
     fn require_valid_root(self: @TContractState, root: u256);
 
     fn latest_root(self: @TContractState) -> u256;
@@ -22,24 +16,19 @@ trait IWorldIDExt<TContractState> {
     fn get_tree_depth(self: @TContractState) -> u8;
 }
 
-/// SemaphoreTreeDepthValidator 
-/// @notice Checks if the provided `treeDepth` is among supported depths.
-///
-/// @param treeDepth The tree depth to validate.
-/// @return supportedDepth Returns `true` if `treeDepth` is between 16 and 32
-#[external(v0)]
-fn validate(tree_depth: u8) -> bool {
-    let min_depth: u8 = 16;
-    let max_depth: u8 = 32;
-    tree_depth >= min_depth && tree_depth <= max_depth
-}
-
+/// @title Bridged World ID
+/// @author Worldcoin - Ported by Nethermind
+/// @notice A base contract for the WorldID state bridges that exist on other chains. The state
+///         bridges manage the root history of the identity merkle tree on chains other than
+///         mainnet.
+/// @dev This contract abstracts the common functionality, allowing for easier understanding and
+///      code reuse.
+/// @dev This contract is very explicitly not able to be instantiated. Do not turn into contract. 
 #[starknet::component]
 pub mod WorldID {
-    // TODO: Add Semaphore Verifier
-    use super::validate;
     use starknet::get_block_timestamp;
-    
+    use super::interface_world_id;
+    use super::semaphore_tree_depth_validator::validate;
     const NULL_ROOT_TIME: u8 = 0;
     #[storage]
     struct Storage {
@@ -55,21 +44,21 @@ pub mod WorldID {
     ///                                  ERRORS                                 ///
     ///////////////////////////////////////////////////////////////////////////////
 
-    mod Errors {
+    pub mod Errors {
         /// @notice Emitted when the provided semaphore tree depth is unsupported.
-        const UNSUPPORTED_TREE_DEPTH: felt252 = 'UNSUPPORTED_TREE_DEPTH';
+        pub const UNSUPPORTED_TREE_DEPTH: felt252 = 'UNSUPPORTED_TREE_DEPTH';
         
         /// @notice Emitted when attempting to validate a root that has expired.
-        const EXPIRED_ROOT: felt252 = 'EXPIRED_ROOT';
+        pub const EXPIRED_ROOT: felt252 = 'EXPIRED_ROOT';
         
         /// @notice Emitted when attempting to validate a root that has yet to be added to the root history
-        const NON_EXISTENT_ROOT: felt252 = 'NON_EXISTENT_ROOT';
+        pub const NON_EXISTENT_ROOT: felt252 = 'NON_EXISTENT_ROOT';
         
         /// @notice Emitted when attempting to update the timestamp for a root that already has one.
-        const CANNOT_OVERWRITE_ROOT: felt252 = 'CANNOT_OVERWRITE_ROOT';
+        pub const CANNOT_OVERWRITE_ROOT: felt252 = 'CANNOT_OVERWRITE_ROOT';
         
         /// @notice Emitted if the latest root is requested but the bridge has not seen any roots yet.
-        const NO_ROOTS_SEEN: felt252 = 'NO_ROOTS_SEEN';
+        pub const NO_ROOTS_SEEN: felt252 = 'NO_ROOTS_SEEN';
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -123,12 +112,43 @@ pub mod WorldID {
 
             let root_timestamp: u256 = self.root_history.read(root).into(); 
 
-            assert(root_timestamp != 0, 'NON_EXISTENT_ROOT');
+            assert(root_timestamp != 0, Errors::NON_EXISTENT_ROOT);
 
-            assert((get_block_timestamp().into() - root_timestamp).into() > self.root_history_expiry.read(), 'EXPIRED_ROOT'); 
+            assert((get_block_timestamp().into() - root_timestamp).into() > self.root_history_expiry.read(), Errors::EXPIRED_ROOT); 
         }
 
-        // TODO: 
+       
+
+        ///////////////////////////////////////////////////////////////////////////////
+        ///                              DATA MANAGEMENT                            ///
+        ///////////////////////////////////////////////////////////////////////////////
+
+        /// @notice Gets the value of the latest root.
+        ///
+        /// @custom:reverts NoRootsSeen If there is no latest root.
+        fn latest_root(self: @ComponentState<TContractState>) -> u256 {
+            assert(self.latest_root.read() != 0, Errors::NO_ROOTS_SEEN); 
+
+            self.latest_root.read()
+        }
+
+        /// @notice Sets the amount of time it takes for a root in the root history to expire.
+        /// @dev When implementing this function, ensure that it is guarded on `onlyOwner`.
+        ///
+        /// @param expiryTime The new amount of time it takes for a root to expire.
+        fn root_history_expiry(self: @ComponentState<TContractState>) -> u256{
+            self.root_history_expiry.read()
+        }
+
+        /// @notice Gets the Semaphore tree depth the contract was initialized with.
+        fn get_tree_depth(self: @ComponentState<TContractState>) -> u8{
+            self.tree_depth.read()
+        }
+    }
+    #[embeddable_as(WorldIDImplVerify)]
+    impl WorldIDVerify<TContractState, +HasComponent<TContractState>> of interface_world_id::IWorldID<ComponentState<TContractState>> {
+
+     // TODO: 
         ///////////////////////////////////////////////////////////////////////////////
         ///                             SEMAPHORE PROOFS                            ///
         ///////////////////////////////////////////////////////////////////////////////
@@ -151,39 +171,10 @@ pub mod WorldID {
         proof: Array<u256>) {   
 
         }   
-
-        ///////////////////////////////////////////////////////////////////////////////
-        ///                              DATA MANAGEMENT                            ///
-        ///////////////////////////////////////////////////////////////////////////////
-
-        /// @notice Gets the value of the latest root.
-        ///
-        /// @custom:reverts NoRootsSeen If there is no latest root.
-        fn latest_root(self: @ComponentState<TContractState>) -> u256 {
-            assert(self.latest_root.read() != 0, 'NO_ROOTS_SEEN'); 
-
-            self.latest_root.read()
-        }
-
-        /// @notice Sets the amount of time it takes for a root in the root history to expire.
-        /// @dev When implementing this function, ensure that it is guarded on `onlyOwner`.
-        ///
-        /// @param expiryTime The new amount of time it takes for a root to expire.
-        fn root_history_expiry(self: @ComponentState<TContractState>) -> u256{
-            self.root_history_expiry.read()
-        }
-
-        /// @notice Gets the Semaphore tree depth the contract was initialized with.
-        fn get_tree_depth(self: @ComponentState<TContractState>) -> u8{
-            self.tree_depth.read()
-        }
     }
-
     // Internal Functions
     #[generate_trait]
-    pub impl InternalImpl<
-        TContractState, +HasComponent<TContractState>
-    > of InternalTrait<TContractState> {
+    pub impl InternalImpl<TContractState, +HasComponent<TContractState>> of InternalTrait<TContractState> {
         ///////////////////////////////////////////////////////////////////////////////
         ///                               CONSTRUCTION                              ///
         ///////////////////////////////////////////////////////////////////////////////
@@ -194,7 +185,7 @@ pub mod WorldID {
         fn _intialize(ref self: ComponentState<TContractState>, tree_depth: u8) {
             // initialize ROOT_HISTORY_EXPIRY
             self.root_history_expiry.write(604800);  // 1 week in seconds
-            //assert(validate(tree_depth), 'UNSUPPORTED_TREE_DEPTH'); // Why doesn't Errors::UNSUPPORTED_TREE_DEPTH work?
+            assert(validate(tree_depth), Errors::UNSUPPORTED_TREE_DEPTH); 
             self.tree_depth.write(tree_depth);
         }
 
@@ -213,7 +204,7 @@ pub mod WorldID {
         fn _receive_root(ref self: ComponentState<TContractState>, new_root: u256) {
             let existing_timestamp: u128 = self.root_history.read(new_root);
 
-            assert(existing_timestamp == NULL_ROOT_TIME.into(), 'CANNOT_OVERWRITE_ROOT');
+            assert(existing_timestamp == NULL_ROOT_TIME.into(), Errors::CANNOT_OVERWRITE_ROOT);
 
             let curr_timestamp: u128 = get_block_timestamp().into();
 
