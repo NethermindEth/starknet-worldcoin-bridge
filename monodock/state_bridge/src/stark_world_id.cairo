@@ -1,14 +1,17 @@
 mod interface_stark_world_id;
-mod interface_crossdomain_ownable3;
-mod world_id_bridge; 
+mod cross_domain_ownable;
+pub mod world_id_bridge; 
 
 //  TODO: Add ownerOnly
 #[starknet::contract]
 mod StarkWorldID {
     use super::world_id_bridge::WorldID;
     use super::interface_stark_world_id;
+    use openzeppelin::access::ownable::OwnableComponent;
 
     component!(path: WorldID, storage: world_id_storage, event: WorldIDEvent);
+    component!(path: OwnableComponent , storage: ownable_storage, event: OwnableEvent);
+
 
     // External Components
     #[abi(embed_v0)]
@@ -21,13 +24,17 @@ mod StarkWorldID {
     #[storage]
     struct Storage {
         #[substorage(v0)]
+        ownable_storage: OwnableComponent::Storage,
+
+        #[substorage(v0)]
         world_id_storage: WorldID::Storage,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        WorldIDEvent: WorldID::Event
+        WorldIDEvent: WorldID::Event,
+        OwnableEvent: OwnableComponent::Event
     }
 
     #[constructor]
