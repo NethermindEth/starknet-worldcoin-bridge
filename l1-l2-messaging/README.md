@@ -89,8 +89,7 @@ To setup Starknet contract, please follow those steps:
 ## Interaction between the two chains
 
 Once you have both dev nodes setup with contracts deployed, we can start interacting with them.
-You can use `starkli` and `cast` to send transactions. But for the sake of simplicity, some scripts
-are already written to replace `cast` usage.
+You can use `starkli` to send transactions.
 
 ### To send messages L1 -> L2:
 ```bash
