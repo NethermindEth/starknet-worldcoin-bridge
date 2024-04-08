@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  anvil:
+    build:
+      context: .  # Set the Docker context to the current directory
+      dockerfile: Dockerfile.anvil  # Specify the custom Dockerfile name
+    ports:
+      - "8545:8545"
+    networks:
+      - worldcoin
+
+  katana:
+    build:
+      context: .  # Set the Docker context to the current directory
+      dockerfile: Dockerfile.katana # Specify the custom Dockerfile name
+    ports:
+      - "5050:5050"
+    depends_on:
+      - anvil
+    networks:
+      - worldcoin
+
+networks:
+  worldcoin:
+    driver: bridge
