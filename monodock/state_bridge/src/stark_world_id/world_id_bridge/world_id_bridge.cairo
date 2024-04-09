@@ -87,8 +87,6 @@ pub mod WorldID {
         new_expiry: u256,
     }
 
-    
-
     // External Functions
     #[embeddable_as(WorldIDImpl)]
     impl WorldID<TContractState, +HasComponent<TContractState>> of super::IWorldIDExt<ComponentState<TContractState>> {
@@ -112,8 +110,6 @@ pub mod WorldID {
 
             assert((get_block_timestamp().into() - root_timestamp).into() > self.root_history_expiry.read(), Errors::EXPIRED_ROOT); 
         }
-
-       
 
         ///////////////////////////////////////////////////////////////////////////////
         ///                              DATA MANAGEMENT                            ///
@@ -141,10 +137,11 @@ pub mod WorldID {
             self.tree_depth.read()
         }
     }
+
     #[embeddable_as(WorldIDImplVerify)]
     impl WorldIDVerify<TContractState, +HasComponent<TContractState>> of interface_world_id::IWorldID<ComponentState<TContractState>> {
 
-     // TODO: 
+        // TODO: 
         ///////////////////////////////////////////////////////////////////////////////
         ///                             SEMAPHORE PROOFS                            ///
         ///////////////////////////////////////////////////////////////////////////////
@@ -160,14 +157,16 @@ pub mod WorldID {
         /// @param proof The zero-knowledge proof
         ///
         /// @custom:reverts string If the zero-knowledge proof cannot be verified for the public inputs.
-        fn verify_proof(self: @ComponentState<TContractState>, root: u256,
+        fn verify_proof(self: @ComponentState<TContractState>, 
+        root: u256,
         signalHash: u256,
         nullifierHash: u256,
         externalNullifierHash: u256,
-        proof: Array<u256>) {   
-
+        proof: Array<u256>) {
+    
         }   
     }
+    
     // Internal Functions
     #[generate_trait]
     pub impl InternalImpl<TContractState, +HasComponent<TContractState>> of InternalTrait<TContractState> {

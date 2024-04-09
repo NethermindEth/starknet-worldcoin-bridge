@@ -2,7 +2,7 @@ mod interface_stark_world_id;
 mod cross_domain_ownable;
 pub mod world_id_bridge; 
 
-//  TODO: Add ownerOnly
+//  TODO: Add CrossDomainMessenger
 #[starknet::contract]
 mod StarkWorldID {
     use super::world_id_bridge::WorldID;
@@ -12,7 +12,6 @@ mod StarkWorldID {
 
     component!(path: WorldID, storage: world_id_storage, event: WorldIDEvent);
     component!(path: OwnableComponent , storage: ownable_storage, event: OwnableEvent);
-
 
     // External Components
     #[abi(embed_v0)]
@@ -44,7 +43,7 @@ mod StarkWorldID {
 
     #[constructor]
     fn constructor(ref self: ContractState, tree_depth: u8) {
-        self.ownable_storage.initializer(get_caller_address()); // msg.sender equivalent
+        self.ownable_storage.initializer(get_caller_address()); 
         self.world_id_storage._intialize(tree_depth); 
     }
 
@@ -57,9 +56,6 @@ mod StarkWorldID {
         ///         the bridged WorldID.
         /// @dev    This function can revert if Nethermind's CrossDomainMessenger stops processing proofs
         ///         or if Nethermind stops submitting them. 
-        ///         Sequencer needs to include changes to the CrossDomainMessenger contract on L1,
-        ///         not economically penalized if messages are not included, however the fraud prover (Cannon)
-        ///         can force the sequencer to include it.
         ///
         /// @param newRoot The value of the new root.
         ///
@@ -83,9 +79,5 @@ mod StarkWorldID {
             self.ownable_storage.assert_only_owner(); // onlyOwner
             self.world_id_storage._set_root_history_expiry(expiry_time); 
         }
-
     }
-
-    
-
 }
