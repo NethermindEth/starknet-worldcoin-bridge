@@ -1,0 +1,24 @@
+# Use the latest foundry image
+FROM ubuntu:latest
+
+# Set the working directory inside the container
+WORKDIR contracts
+
+# Copy our source code into the container
+COPY . .
+
+RUN apt-get update && \
+    apt-get install -y curl git bash && \
+    apt-get clean
+
+RUN curl -L https://foundry.paradigm.xyz | bash
+
+RUN curl https://get.starkli.sh | sh
+
+
+ENV PATH="/root/.foundry/bin:${PATH}"
+ENV PATH="/root/.starkli/bin:${PATH}"
+
+# Use array syntax for ENTRYPOINT
+# ENTRYPOINT ["anvil", "--host", "0.0.0.0", "--chain-id", "31337", "--block-time", "2", "--load-state", "/chains/worldcoin", "--dump-state", "/chains/worldcoin"]
+CMD foundryup && starkliup -v 0.1.20 && bash deploy_contracts.sh

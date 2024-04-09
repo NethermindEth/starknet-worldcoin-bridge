@@ -21,6 +21,15 @@ services:
     networks:
       - worldcoin
 
+  contracts:
+    build:
+      context: .  # Set the Docker context to the current directory
+      dockerfile: Dockerfile.contracts # Specify the custom Dockerfile name
+    depends_on:
+      - anvil
+      - katana
+    networks:
+      - worldcoin
 networks:
   worldcoin:
     driver: bridge
