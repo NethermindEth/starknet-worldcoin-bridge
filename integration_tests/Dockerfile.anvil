@@ -8,5 +8,4 @@ WORKDIR /Anvil
 COPY . .
 
 # Use array syntax for ENTRYPOINT
-# ENTRYPOINT ["anvil", "--host", "0.0.0.0", "--chain-id", "31337", "--block-time", "2", "--load-state", "/chains/worldcoin", "--dump-state", "/chains/worldcoin"]
 ENTRYPOINT ["anvil", "--host", "0.0.0.0", "--chain-id", "31337"]

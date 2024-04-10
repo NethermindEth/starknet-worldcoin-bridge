@@ -29,6 +29,11 @@ jobs:
           ls -la
           docker-compose up -d --build
 
-      - name: Docker contract deployer & message passing logs
+      - name: Deploy contracts on both the chains
         run: |
           docker logs -f integration_tests_contracts_1
+
+      - name:  Check l1-l2 message passing and print results
+        run: |
+          bash .scripts/test_messaging.sh
+        shell: bash
