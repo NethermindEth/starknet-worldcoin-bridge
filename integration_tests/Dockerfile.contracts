@@ -8,16 +8,18 @@ WORKDIR contracts
 COPY . .
 
 RUN apt-get update && \
-    apt-get install -y curl git bash && \
+    apt-get install -y curl git bash jq && \
     apt-get clean
 
 RUN curl -L https://foundry.paradigm.xyz | bash
 
 RUN curl https://get.starkli.sh | sh
 
+RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.3.1
 
 ENV PATH="/root/.foundry/bin:${PATH}"
 ENV PATH="/root/.starkli/bin:${PATH}"
+ENV PATH="/root/.local/bin:${PATH}"
 
 # Use array syntax for ENTRYPOINT
 # ENTRYPOINT ["anvil", "--host", "0.0.0.0", "--chain-id", "31337", "--block-time", "2", "--load-state", "/chains/worldcoin", "--dump-state", "/chains/worldcoin"]
