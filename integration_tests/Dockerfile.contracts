@@ -13,7 +13,7 @@ RUN apt-get update && \
 
 RUN curl -L https://foundry.paradigm.xyz | bash
 
-RUN curl https://get.starkli.sh | sh
+RUN curl https://get.starkli.sh | bash
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.3.1
 
