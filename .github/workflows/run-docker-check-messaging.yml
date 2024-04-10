@@ -27,4 +27,4 @@ jobs:
         run: |
           cd integration_tests
           ls -la
-          docker-compose up -d
+          docker-compose up --build
