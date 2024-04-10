@@ -27,4 +27,5 @@ jobs:
         run: |
           cd integration_tests
           ls -la
-          docker-compose up --build
+          docker-compose up -d --build
+          docker logs -f integration_tests-contracts-1
