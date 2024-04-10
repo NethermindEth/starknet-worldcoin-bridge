@@ -28,4 +28,7 @@ jobs:
           cd integration_tests
           ls -la
           docker-compose up -d --build
+
+      - name: Docker contract deployer & message passing logs
+        run: |
           docker logs -f integration_tests_contracts_1
