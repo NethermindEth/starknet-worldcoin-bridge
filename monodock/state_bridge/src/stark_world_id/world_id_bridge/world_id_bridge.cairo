@@ -2,7 +2,7 @@
 /// @author Nethermind
 /// @dev Interfaces that will be exposed externally 
 #[starknet::interface]
-trait IWorldIDExt<TContractState> {
+pub trait IWorldIDExt<TContractState> {
     fn require_valid_root(self: @TContractState, root: u256);
 
     fn latest_root(self: @TContractState) -> u256;
@@ -23,8 +23,8 @@ trait IWorldIDExt<TContractState> {
 #[starknet::component]
 pub mod WorldID {
     use starknet::get_block_timestamp;
-    use state_bridge::stark_world_id::world_id_bridge::interface_world_id;
-    use state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
+    use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
+    use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     const NULL_ROOT_TIME: u8 = 0;
     #[storage]
     struct Storage {
