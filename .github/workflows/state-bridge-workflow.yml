@@ -1,0 +1,32 @@
+name: Docker Deployment
+
+on:
+  push:
+    branches:
+      - feat/ci_state_bridge
+
+jobs:
+  build:
+    name: Building CI pipeline on Ubuntu OS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install scarb 2.6.4
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.6.4
+
+      - name: Install Starknet Foundry
+        run: |
+          curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
+		  snfoundryup
+
+      - name: Set PATH environment variable
+        run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Check versions
+        run: |
+		  scarb --version
+		  snfoundryup --version
