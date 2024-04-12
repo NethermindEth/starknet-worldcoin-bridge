@@ -3,8 +3,7 @@ mod world_id_bridge;
 #[cfg(test)]
 mod test {
     use starknet::{ContractAddress, get_caller_address};
-    use snforge_std::{
-    declare, ContractClass, ContractClassTrait, prank, start_prank, start_warp, CheatTarget};
+    use snforge_std::{declare, ContractClass, ContractClassTrait, prank, start_prank, start_warp, CheatTarget};
     use world_id_state_bridge::stark_world_id::interface_stark_world_id::{IStarkWorldIDDispatcher, IStarkWorldIDDispatcherTrait, IStarkWorldIDSafeDispatcher, IStarkWorldIDSafeDispatcherTrait};
     use world_id_state_bridge::stark_world_id::world_id_bridge::world_id_bridge::{IWorldIDExtSafeDispatcher, IWorldIDExtSafeDispatcherTrait};
 
@@ -55,7 +54,6 @@ mod test {
         assert!(outside_call.is_err());
     }
 
-    
     #[test]
     #[feature("safe_dispatcher")]
     fn test_valid_require_valid_root() {
