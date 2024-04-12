@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod test {
     use world_id_state_bridge::tests::mocks::world_id_bridge_mock::WorldIDBridgeMock;
@@ -9,7 +8,6 @@ mod test {
     use starknet::SyscallResultTrait;
     use starknet::testing::set_block_timestamp;
     type ComponentState = WorldID::ComponentState<WorldIDBridgeMock::ContractState>;
-
 
     impl TestingStateDefault of Default<ComponentState> {
         fn default() -> ComponentState {
@@ -81,41 +79,6 @@ mod test {
     ///////////////////////////////////////////////////////////////////
     ///                           PANICS                            ///
     ///////////////////////////////////////////////////////////////////
-
-    // #[test]
-    // #[should_panic]
-    fn test_invalid_require_valid_root() {
-        let mut world_id = setup();
-        let old_root: u256 = 0x712cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-        world_id._receive_root(old_root);
-
-        let new_root: u256 = 0x012cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-        world_id._receive_root(new_root);
-
-        world_id.require_valid_root(old_root);
-    }
-
-    // snforge does not support startnet::testing::set_block_timestamp
-    // #[test]
-    // #[should_panic]
-    // fn test_expired_require_valid_root() {
-    //     let mut world_id = setup();
-    //     let timestamp: u64 = 10; 
-    //     set_block_timestamp(timestamp); 
-
-    //     let expiry: u64 = 1000000;
-    //     world_id._set_root_history_expiry(expiry.into()); // set expiry
-
-    //     let old_root: u256 = 0x712cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-    //     world_id._receive_root(old_root);
-
-    //     let new_root: u256 = 0x012cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-    //     world_id._receive_root(new_root);
-        
-    //     let new_timestamp: u64 = expiry + timestamp + 1; 
-    //     set_block_timestamp(new_timestamp); 
-    //     world_id.require_valid_root(old_root);
-    // }
 
     #[test]
     #[should_panic]
