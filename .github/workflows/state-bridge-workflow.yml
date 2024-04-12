@@ -29,4 +29,4 @@ jobs:
         run: |
           snfoundryup
           scarb --version
-          snfoundryup --version
+          snforge --version
