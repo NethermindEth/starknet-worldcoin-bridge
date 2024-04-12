@@ -1,9 +1,9 @@
-name: State Bridge Deployment
+name: State Bridge Devlopment & Tests
 
 on:
   push:
     branches:
-      - feat/ci_state_bridge
+      - state_bridge
 
 jobs:
   build_and_push:
