@@ -1,12 +1,13 @@
-mod interface_stark_world_id;
+pub mod interface_stark_world_id;
 mod cross_domain_ownable;
 pub mod world_id_bridge; 
 
 //  TODO: Add CrossDomainMessenger
 #[starknet::contract]
-mod StarkWorldID {
+pub mod StarkWorldID {
     use super::world_id_bridge::WorldID;
-    use super::interface_stark_world_id;
+    pub use super::interface_stark_world_id;
+    pub use super::interface_stark_world_id::IStarkWorldIDDispatcher;
     use openzeppelin::access::ownable::OwnableComponent;
     use starknet::get_caller_address;
 
@@ -46,8 +47,9 @@ mod StarkWorldID {
         self.ownable_storage.initializer(get_caller_address()); 
         self.world_id_storage._intialize(tree_depth); 
     }
-
-    impl StarkWorldID of interface_stark_world_id::IStarkWorldID<ContractState> {
+    
+    #[abi(embed_v0)]
+    pub impl StarkWorldID of interface_stark_world_id::IStarkWorldID<ContractState> {
         ///////////////////////////////////////////////////////////////////////////////
         ///                               ROOT MIRRORING                            ///
         ///////////////////////////////////////////////////////////////////////////////

@@ -108,7 +108,7 @@ pub mod WorldID {
 
             assert(root_timestamp != 0, Errors::NON_EXISTENT_ROOT);
 
-            assert((get_block_timestamp().into() - root_timestamp).into() > self.root_history_expiry.read(), Errors::EXPIRED_ROOT); 
+            assert((get_block_timestamp().into() - root_timestamp).into() <= self.root_history_expiry.read(), Errors::EXPIRED_ROOT); 
         }
 
         ///////////////////////////////////////////////////////////////////////////////

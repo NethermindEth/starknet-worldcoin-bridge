@@ -29,6 +29,4 @@ pub mod WorldIDBridgeMock {
     fn constructor(ref self: ContractState, tree_depth: u8) {
         self.world_id_storage._intialize(tree_depth); 
     }
-
-   
 }
