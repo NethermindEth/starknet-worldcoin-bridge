@@ -109,9 +109,3 @@ Example here where you can see the details of the message and the event being em
 2024-04-05T10:59:01.199767Z  INFO txpool: Transaction received | Hash: 0x784b3039f0c2c2e3e516f04722f29de44b91a3a39ecd6b17899508e0e0c8d16
 ```
 You can try to change the payload into the scripts to see how the contract on starknet behaves receiveing the message. Try to set both values to 0 for the struct. In the case of the value, you'll see a warning in Katana saying `Invalid value` because the contract is expected `9898989`.
-
-## Work In Progress
-1. Dockerisation of Katana.
-2. Docker-compose for running Anvil & Katana and deploy contracts.
-3. A script to check the l1-l2 messaging.
-4. Documentation for the contracts, docker-compose and GitHub Action.

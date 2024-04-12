@@ -6,7 +6,7 @@ RUN apt-get update && \
     apt-get install -y curl git bash && \
     apt-get clean
 
-COPY config.json .
+COPY ./configs/config.json .
 # Install Dojoup
 RUN curl -L https://install.dojoengine.org | bash
 

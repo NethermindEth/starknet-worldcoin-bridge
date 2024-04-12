@@ -1,0 +1,39 @@
+name: Docker Deployment
+on:
+  push:
+    #will change the default branch to main once its merged to main branch
+    branches:
+      - feat/cairo-msg-contracts
+
+jobs:
+  build:
+    name: Building CI pipeline on Ubuntu OS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check if Docker is installed
+        run: |
+          if ! command -v docker &> /dev/null
+          then
+              apt-get update
+              apt-get install -y docker.io
+              apt-get install -y docker-compose
+          fi
+
+      - name: Change directory to Docker Compose folder & run docker-compose
+        run: |
+          cd integration_tests
+          ls -la
+          docker-compose up -d --build
+
+      - name: Deploy contracts on both the chains
+        run: |
+          docker logs -f integration_tests_contracts_1
+
+      - name:  Check l1-l2 message passing and print results
+        run: |
+          bash integration_tests/scripts/test_messaging.sh
+        shell: bash
