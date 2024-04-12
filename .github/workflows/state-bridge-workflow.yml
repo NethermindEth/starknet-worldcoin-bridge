@@ -21,30 +21,21 @@ jobs:
       - name: Install Starknet Foundry
         run: |
           curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
+          snfoundryup
 
       - name: Set PATH environment variable
         run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
 
       - name: Check versions
         run: |
-          snfoundryup
           scarb --version
           snforge --version
-       - name: Build contract with scarb
-        run: |
-          cd /monodock/state_bridge
-          scarb build
-
-      - name: Run tests with snforge
-        run: |
-          cd /monodock/state_bridge
-          snforge test
 
       - name: Build contract with scarb
         run: |
           cd /monodock/state_bridge
           scarb build
-  
+
       - name: Run tests with snforge
         run: |
           cd /monodock/state_bridge
