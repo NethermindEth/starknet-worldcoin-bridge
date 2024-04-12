@@ -20,13 +20,13 @@ jobs:
 
       - name: Install Starknet Foundry
         run: |
-          curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh
-          snfoundryup
+          curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
 
       - name: Set PATH environment variable
         run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
 
       - name: Check versions
         run: |
+          snfoundryup
           scarb --version
           snfoundryup --version
