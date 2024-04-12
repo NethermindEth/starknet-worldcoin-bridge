@@ -33,10 +33,10 @@ jobs:
 
       - name: Build contract with scarb
         run: |
-          cd /monodock/state_bridge
+          cd monodock/state_bridge
           scarb build
 
       - name: Run tests with snforge
         run: |
-          cd /monodock/state_bridge
+          cd monodock/state_bridge
           snforge test
