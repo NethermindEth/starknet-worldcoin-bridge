@@ -30,3 +30,22 @@ jobs:
           snfoundryup
           scarb --version
           snforge --version
+       - name: Build contract with scarb
+        run: |
+          cd /monodock/state_bridge
+          scarb build
+
+      - name: Run tests with snforge
+        run: |
+          cd /monodock/state_bridge
+          snforge test
+
+      - name: Build contract with scarb
+        run: |
+          cd /monodock/state_bridge
+          scarb build
+  
+      - name: Run tests with snforge
+        run: |
+          cd /monodock/state_bridge
+          snforge test
