@@ -16,6 +16,18 @@ jobs:
       - name: Update submodules
         run: git submodule update --init --recursive
 
+      - name: Download Foundry
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+
+      - name: Set PATH environment variable for foundry
+          run: echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install Foundry
+        run: |
+          foundryup
+
+
       - name: Check if Docker is installed
         run: |
           if ! command -v docker &> /dev/null
