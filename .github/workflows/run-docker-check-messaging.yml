@@ -36,5 +36,5 @@ jobs:
         working-directory: ./integration_tests
 
       - name: Check l1-l2 message passing and print results
-        run: bash .integration_tests/scripts/test_messaging.sh
+        run: bash ./integration_tests/scripts/test_messaging.sh
         shell: bash
