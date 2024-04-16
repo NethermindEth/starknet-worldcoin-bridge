@@ -3,7 +3,7 @@ on:
   push:
     #will change the default branch to main once its merged to main branch
     branches:
-      - feat/cairo-msg-contracts
+      - feat/l1-l2-messaging
 
 jobs:
   build:
@@ -25,15 +25,14 @@ jobs:
 
       - name: Change directory to Docker Compose folder & run docker-compose
         run: |
-          cd integration_tests
-          ls -la
+          cd ./integration_tests
           docker-compose up -d --build
 
       - name: Deploy contracts on both the chains
         run: |
-          docker logs -f integration_tests_contracts_1
+          docker-compose logs -f contracts
 
       - name:  Check l1-l2 message passing and print results
         run: |
-          bash integration_tests/scripts/test_messaging.sh
+          bash ./integration_tests/scripts/test_messaging.sh
         shell: bash
