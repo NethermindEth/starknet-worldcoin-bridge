@@ -2,7 +2,7 @@
 
 broadcast_message() {
     # Change directory to solidity
-    cd ../solidity
+    cd ./integration_tests/solidity
 
     # Copies the example of anvil configuration file into .env
     # that is loaded by foundry automatically.
