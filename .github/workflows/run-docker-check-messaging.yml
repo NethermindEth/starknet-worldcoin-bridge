@@ -22,7 +22,9 @@ jobs:
           echo "$HOME/.foundry/bin" >> $GITHUB_PATH
 
       - name: Install Foundry using foundryup
-        run: foundryup
+        run: |
+          source $HOME/.bashrc
+          foundryup
 
       - name: Check if Docker is installed
         run: |
