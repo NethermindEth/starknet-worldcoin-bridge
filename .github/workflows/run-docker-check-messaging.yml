@@ -1,7 +1,6 @@
 name: Docker Deployment
 on:
   push:
-    #will change the default branch to main once its merged to main branch
     branches:
       - feat/l1-l2-messaging
 
@@ -18,21 +17,22 @@ jobs:
         run: |
           if ! command -v docker &> /dev/null
           then
-              apt-get update
-              apt-get install -y docker.io
-              apt-get install -y docker-compose
+              sudo apt-get update
+              sudo apt-get install -y docker.io
+              sudo apt-get install -y docker-compose
           fi
 
-      - name: Change directory to Docker Compose folder & run docker-compose
+      - name: Set up Docker Compose
         run: |
           cd ./integration_tests
           docker-compose up -d --build
+        working-directory: ${{ github.workspace }}
 
       - name: Deploy contracts on both the chains
-        run: |
-          docker-compose logs -f contracts
+        run: docker-compose logs -f contracts
+        working-directory: ./integration_tests
 
-      - name:  Check l1-l2 message passing and print results
-        run: |
-          bash ./integration_tests/scripts/test_messaging.sh
+      - name: Check l1-l2 message passing and print results
+        run: bash ./scripts/test_messaging.sh
+        working-directory: ./integration_tests
         shell: bash
