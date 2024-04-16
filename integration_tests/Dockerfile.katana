@@ -16,5 +16,7 @@ ENV PATH="/root/.dojo/bin:${PATH}"
 # Expose any necessary ports if applicable
 EXPOSE 5050
 
+RUN dojoup -v 0.4.4
+
 # Set the default command to run when the container starts
-CMD dojoup -v 0.4.4 && katana --host 0.0.0.0 --messaging config.json
+CMD katana --host 0.0.0.0 --messaging config.json
