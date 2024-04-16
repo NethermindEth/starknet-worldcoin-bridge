@@ -21,7 +21,7 @@ jobs:
           curl -L https://foundry.paradigm.xyz | bash
 
       - name: Set PATH environment variable for foundry
-          run: echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_ENV
+        run: echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Foundry
         run: |
