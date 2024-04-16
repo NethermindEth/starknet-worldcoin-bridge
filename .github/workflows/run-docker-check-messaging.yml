@@ -22,7 +22,7 @@ jobs:
 
       - name: Set environment PATH
         run: |
-          echo "/root/.foundry/bin:${PATH}" >> $GITHUB_ENV
+          echo "/root/.foundry/bin:$PATH" >> $GITHUB_PATH
 
       - name: Install Foundry
         run: |
