@@ -2,7 +2,7 @@ name: Docker Deployment
 on:
   push:
     branches:
-      - feat/l1-l2-messaging
+      - feat/cairo-msg-contracts
 
 jobs:
   build:
