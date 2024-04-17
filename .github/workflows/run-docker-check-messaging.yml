@@ -26,16 +26,7 @@ jobs:
           fi
 
       - name: Install Foundry
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash
-
-      - name: Update Foundry
-        run: |
-          echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_PATH
-          rustup update stable
-          git clone https://github.com/foundry-rs/foundry.git
-          cd foundry
-          cargo install --path ./crates/forge --profile local --force --locked
+        uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Foundry Version
         run: forge --version
@@ -45,7 +36,6 @@ jobs:
           cd ./integration_tests
           docker-compose up -d --build
         working-directory: ${{ github.workspace }}
-
       - name: Deploy contracts on both the chains
         run: docker-compose logs -f contracts
         working-directory: ./integration_tests
