@@ -33,7 +33,9 @@ jobs:
         run: |
           echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_PATH
           rustup update stable
-          cargo install --git https://github.com/foundry-rs/foundry --profile local --locked forge cast chisel anvil
+          git clone https://github.com/foundry-rs/foundry.git
+          cd foundry
+          cargo install --path ./crates/forge --profile local --force --locked
 
       - name: Show Foundry Version
         run: forge --version
