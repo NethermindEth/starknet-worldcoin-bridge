@@ -28,6 +28,7 @@ jobs:
       - name: Install Foundry
         run: |
           curl -L https://foundry.paradigm.xyz | bash
+          cd $HOME
           ls -la
           echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_PATH
 
