@@ -27,13 +27,17 @@ jobs:
 
       - name: Install Foundry
         run: |
-          sudo curl -L https://foundry.paradigm.xyz | bash
+          apt-get update
+          apt-get install -y curl git bash jq
+          apt-get clean
+          curl -L https://foundry.paradigm.xyz | bash
 
       - name: Update Foundry
         run: |
           cd $HOME
           ls -la
           echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_PATH
+          rustup
           foundryup
 
       - name: Show Foundry Version
