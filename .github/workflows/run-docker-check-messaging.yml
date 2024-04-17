@@ -25,14 +25,10 @@ jobs:
               sudo apt-get install -y docker-compose
           fi
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl git bash jq
-
       - name: Install Foundry
         run: |
           curl -L https://foundry.paradigm.xyz | bash
+          ls -la
           echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_PATH
 
       - name: Update Foundry
