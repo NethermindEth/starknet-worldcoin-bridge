@@ -25,6 +25,22 @@ jobs:
               sudo apt-get install -y docker-compose
           fi
 
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl git bash jq
+
+      - name: Install Foundry
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+
+      - name: Update Foundry
+        run: foundryup
+
+      - name: Show Foundry Version
+        run: forge --version
+
       - name: Set up Docker Compose
         run: |
           cd ./integration_tests
