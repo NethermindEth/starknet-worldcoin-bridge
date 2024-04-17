@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Foundry
         run: |
-          curl -L https://foundry.paradigm.xyz | bash
+          sudo curl -L https://foundry.paradigm.xyz | bash
 
       - name: Update Foundry
         run: |
