@@ -25,12 +25,15 @@ jobs:
               sudo apt-get install -y docker-compose
           fi
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
       - name: Set up Docker Compose
         run: |
           cd ./integration_tests
           docker-compose up -d --build
-        working-directory: ${{ github.workspace }}
 
+        working-directory: ${{ github.workspace }}
       - name: Deploy contracts on both the chains
         run: docker-compose logs -f contracts
         working-directory: ./integration_tests
