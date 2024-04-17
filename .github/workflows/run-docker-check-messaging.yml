@@ -27,9 +27,9 @@ jobs:
 
       - name: Install Foundry
         run: |
-          apt-get update
-          apt-get install -y curl git bash jq
-          apt-get clean
+          sudo apt-get update
+          sudo apt-get install -y curl git bash jq
+          sudo apt-get clean
           curl -L https://foundry.paradigm.xyz | bash
 
       - name: Update Foundry
