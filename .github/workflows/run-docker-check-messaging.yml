@@ -27,18 +27,13 @@ jobs:
 
       - name: Install Foundry
         run: |
-          sudo apt-get update
-          sudo apt-get install -y curl git bash jq
-          sudo apt-get clean
           curl -L https://foundry.paradigm.xyz | bash
 
       - name: Update Foundry
         run: |
-          cd $HOME
-          ls -la
           echo "PATH=$HOME/.foundry/bin:$PATH" >> $GITHUB_PATH
-          rustup
-          foundryup
+          rustup update stable
+          cargo install --git https://github.com/foundry-rs/foundry --profile local --locked forge cast chisel anvil
 
       - name: Show Foundry Version
         run: forge --version
