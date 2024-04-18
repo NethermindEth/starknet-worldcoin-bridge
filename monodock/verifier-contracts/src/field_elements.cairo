@@ -1,3 +1,4 @@
+use core::array::ArrayTrait;
 use core::integer::{u256_checked_add, u256_checked_sub, u256_wide_mul, u512_safe_divmod_by_u256};
 use verifier::math::U256PowerTrait;
 
@@ -108,6 +109,7 @@ impl FQ12Mul of Mul<FQ12> {
             let lhs_copy = lhs.clone();
             let rhs_copy = rhs.clone();
             while (j < 12) {
+                // TODO: Optimize this for gas using pop_front() instead of at.
                 new_row.append(wide_mul_mod(*lhs_copy.coeffs.at(i), *rhs_copy.coeffs.at(j)));
                 j += 1;
             };
@@ -122,6 +124,7 @@ impl FQ12Mul of Mul<FQ12> {
                     if max_length == 0 {
                         break;
                     }
+                    // TODO: Optimize this for gas using pop_front() instead of at.
                     if k < result.len() && k < new_row.len() {
                         combined.append(*result.at(k) + *new_row.at(k));
                     } else if k < result.len() {
