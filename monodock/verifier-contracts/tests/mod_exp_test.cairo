@@ -1,4 +1,4 @@
-use verifier::ec_math::mod_exp;
+use verifier::math::mod_exp;
 
 #[derive(Copy, Drop)]
 struct Input {
@@ -67,3 +67,4 @@ fn test_mod_exp5() {
 fn test_mod_exp6(a: u256, b: u256) {
     mod_exp(a, b);
 }
+
