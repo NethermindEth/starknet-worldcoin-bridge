@@ -13,7 +13,8 @@ struct Input {
 fn test_mod_exp1() {
     let input = Input {
         a: 88009966869426586326054793412191768538473160230674771117477940242756393061596,
-        b: 26859873616407055777888130878028564851092662860690821559568496789771229719829    };
+        b: 26859873616407055777888130878028564851092662860690821559568496789771229719829
+    };
     let expected = 4957037684828371349028486368725664008193737461084841662327841118011875819652;
     let result = mod_exp(input.a, input.b);
     assert!(result == expected, "expected: {}, got: {}", expected, result);
@@ -61,5 +62,4 @@ fn test_mod_exp5() {
     let result = mod_exp(input.a, input.b);
     assert!(result == expected, "expected: {}, got: {}", expected, result);
 }
-
 
