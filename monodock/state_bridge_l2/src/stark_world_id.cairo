@@ -48,7 +48,7 @@ pub mod StarkWorldID {
         self.world_id_storage._intialize(tree_depth); 
     }
     
-    #[abi(embed_v0)]
+    
     pub impl StarkWorldID of interface_stark_world_id::IStarkWorldID<ContractState> {
         ///////////////////////////////////////////////////////////////////////////////
         ///                               ROOT MIRRORING                            ///
@@ -63,6 +63,7 @@ pub mod StarkWorldID {
         ///
         /// @custom:reverts CannotOverwriteRoot If the root already exists in the root history.
         /// @custom:reverts string If the caller is not the owner.
+        #[l1_handler]
         fn receive_root(ref self: ContractState, new_root: u256) {
             self.ownable_storage.assert_only_owner(); // onlyOwner
             self.world_id_storage._receive_root(new_root); 
@@ -77,6 +78,7 @@ pub mod StarkWorldID {
         /// @param expiryTime The new amount of time it takes for a root to expire.
         ///
         /// @custom:reverts string If the caller is not the owner.
+        #[l1_handler]
         fn set_root_history_expiry(ref self: ContractState, expiry_time: u256) {
             self.ownable_storage.assert_only_owner(); // onlyOwner
             self.world_id_storage._set_root_history_expiry(expiry_time); 
