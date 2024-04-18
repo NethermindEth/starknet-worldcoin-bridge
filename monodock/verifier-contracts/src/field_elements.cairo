@@ -86,7 +86,7 @@ impl FQ12mplementation of FQ12Trait {
     }
 
     fn zero() -> FQ12 {
-        FQ12 { coeffs: array![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+        FQ12 { coeffs: array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
     }
 }
 
