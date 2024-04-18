@@ -3,8 +3,8 @@ version = 1
 
 [[package]]
 name = "snforge_std"
-version = "0.21.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.21.0#2996b8c1dd66b2715fc67e69578089f278a46790"
+version = "0.22.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.22.0#9b215944c6c5871c738381b4ded61bbf06e7ba35"
 
 [[package]]
 name = "verifier"
