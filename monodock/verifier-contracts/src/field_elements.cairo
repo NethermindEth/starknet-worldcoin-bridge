@@ -1,6 +1,6 @@
 use core::array::ArrayTrait;
 use core::integer::{u256_checked_add, u256_checked_sub, u256_wide_mul, u512_safe_divmod_by_u256};
-use verifier::math::U256PowerTrait;
+use verifier::math::{U256PowerTrait, wide_mul_mod, max};
 
 const P: u256 = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
@@ -141,20 +141,3 @@ impl FQ12Mul of Mul<FQ12> {
     }
 }
 
-fn wide_mul_mod(lhs: u256, rhs: u256) -> u256 {
-    if lhs == 0 || rhs == 0 {
-        return 0;
-    }
-    let (_, res, _, _, _, _, _) = u512_safe_divmod_by_u256(
-        u256_wide_mul(lhs, rhs), P.try_into().unwrap()
-    );
-    res
-}
-
-fn max(a: usize, b: usize) -> usize {
-    if a > b {
-        a
-    } else {
-        b
-    }
-}

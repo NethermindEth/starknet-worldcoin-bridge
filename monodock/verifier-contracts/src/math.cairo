@@ -53,8 +53,7 @@ fn mod_inv(a: u256) -> u256 {
 /// - `u256`: The result of `base^exp % P`.
 fn power(mut base: u256, mut exp: u256) -> u256 {
     let mut result: u256 = 1;
-    while(!exp.is_zero())
-    {
+    while (!exp.is_zero()) {
         if !(exp % 2)
             .is_zero() { // If the least significant bit is 1, multiply the base with the result
             let (_, r, _, _, _, _, _) = u512_safe_divmod_by_u256(
@@ -69,5 +68,23 @@ fn power(mut base: u256, mut exp: u256) -> u256 {
         exp /= 2; // Right shift the exponent
     };
     result
+}
+
+fn wide_mul_mod(lhs: u256, rhs: u256) -> u256 {
+    if lhs == 0 || rhs == 0 {
+        return 0;
+    }
+    let (_, res, _, _, _, _, _) = u512_safe_divmod_by_u256(
+        u256_wide_mul(lhs, rhs), P.try_into().unwrap()
+    );
+    res
+}
+
+fn max(a: usize, b: usize) -> usize {
+    if a > b {
+        a
+    } else {
+        b
+    }
 }
 
