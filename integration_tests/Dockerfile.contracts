@@ -1,0 +1,26 @@
+# Use the latest foundry image
+FROM ubuntu:latest
+
+# Set the working directory inside the container
+WORKDIR contracts
+
+# Copy our source code into the container
+COPY . .
+
+RUN apt-get update && \
+    apt-get install -y curl git bash jq && \
+    apt-get clean
+
+RUN curl -L https://foundry.paradigm.xyz | bash
+
+RUN curl https://get.starkli.sh | sh
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 2.3.1
+
+ENV PATH="/root/.foundry/bin:${PATH}"
+ENV PATH="/root/.starkli/bin:${PATH}"
+ENV PATH="/root/.local/bin:${PATH}"
+
+RUN foundryup && starkliup -v 0.1.20
+
+CMD bash ./scripts/deploy_contracts.sh
