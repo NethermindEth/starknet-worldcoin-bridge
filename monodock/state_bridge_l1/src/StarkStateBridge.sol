@@ -6,7 +6,7 @@ import {IStarkWorldID} from "./interfaces/IStarkWorldID.sol";
 import {IRootHistory} from "./interfaces/IRootHistory.sol";
 import {IWorldIDIdentityManager} from "./interfaces/IWorldIDIdentityManager.sol";
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
-//import {ICrossDomainOwnable3} from "./interfaces/ICrossDomainOwnable3.sol";
+import "./starknet/IStarknetMessaging.sol";
 
 /// @title World ID State Bridge Starknet
 /// @author Worldcoin
@@ -18,10 +18,7 @@ contract StarkStateBridge is Ownable2Step {
     ///////////////////////////////////////////////////////////////////
 
     /// @notice The address of the StarkWorldID contract 
-    address public immutable StarkWorldIDAddress;
-
-    /// @notice address for OP Stack chain Ethereum mainnet L1CrossDomainMessenger contract
-    address internal immutable crossDomainMessengerAddress;
+    address public immutable starkWorldIDAddress;
 
     /// @notice Ethereum mainnet worldID Address
     address public immutable worldIDAddress;
@@ -92,24 +89,20 @@ contract StarkStateBridge is Ownable2Step {
     /// @notice constructor
     /// @param _worldIDIdentityManager Deployment address of the WorldID Identity Manager contract
     /// @param _opWorldIDAddress Address of the Optimism contract that will receive the new root and timestamp
-    /// @param _crossDomainMessenger L1CrossDomainMessenger contract used to communicate with the desired OP
     /// Stack network
     /// @custom:revert if any of the constructor params addresses are zero
     constructor(
         address _worldIDIdentityManager,
-        address _opWorldIDAddress,
-        address _crossDomainMessenger
+        address _starkWorldIDAddress
     ) {
         if (
-            _worldIDIdentityManager == address(0) || _opWorldIDAddress == address(0)
-                || _crossDomainMessenger == address(0)
+            _worldIDIdentityManager == address(0) || _starkWorldIDAddress == address(0)
         ) {
             revert AddressZero();
         }
 
         opWorldIDAddress = _opWorldIDAddress;
-        worldIDAddress = _worldIDIdentityManager;
-        crossDomainMessengerAddress = _crossDomainMessenger;
+        starkIDAddress = _starkWorldIDAddress;
         _gasLimitPropagateRoot = DEFAULT_OP_GAS_LIMIT;
         _gasLimitSetRootHistoryExpiry = DEFAULT_OP_GAS_LIMIT;
         _gasLimitTransferOwnership = DEFAULT_OP_GAS_LIMIT;
@@ -124,16 +117,8 @@ contract StarkStateBridge is Ownable2Step {
     function propagateRoot() external {
         uint256 latestRoot = IWorldIDIdentityManager(worldIDAddress).latestRoot();
 
-        // The `encodeCall` function is strongly typed, so this checks that we are passing the
-        // correct data to the optimism bridge.
-        // bytes memory message = abi.encodeCall(IOpWorldID.receiveRoot, (latestRoot));
+        // TODO:
 
-        // ICrossDomainMessenger(crossDomainMessengerAddress).sendMessage(
-        //     // Contract address on the OP Stack Chain
-        //     opWorldIDAddress,
-        //     message,
-        //     _gasLimitPropagateRoot
-        // );
 
         emit RootPropagated(latestRoot);
     }
@@ -166,17 +151,8 @@ contract StarkStateBridge is Ownable2Step {
     /// @notice Adds functionality to the StateBridge to set the root history expiry on OpWorldID
     /// @param _rootHistoryExpiry new root history expiry
     function setRootHistoryExpiry(uint256 _rootHistoryExpiry) external onlyOwner {
-        // The `encodeCall` function is strongly typed, so this checks that we are passing the
-        // correct data to the optimism bridge.
-        bytes memory message =
-            abi.encodeCall(IRootHistory.setRootHistoryExpiry, (_rootHistoryExpiry));
-
-        ICrossDomainMessenger(crossDomainMessengerAddress).sendMessage(
-            // Contract address on the OP Stack Chain
-            opWorldIDAddress,
-            message,
-            _gasLimitSetRootHistoryExpiry
-        );
+        
+        // TODO:
 
         emit SetRootHistoryExpiry(_rootHistoryExpiry);
     }
@@ -187,26 +163,26 @@ contract StarkStateBridge is Ownable2Step {
 
     /// @notice Sets the gas limit for the propagateRoot method
     /// @param _opGasLimit The new gas limit for the propagateRoot method
-    function setGasLimitPropagateRoot(uint32 _opGasLimit) external onlyOwner {
-        if (_opGasLimit <= 0) {
+    function setGasLimitPropagateRoot(uint32 _starkGasLimit) external onlyOwner {
+        if (_starkGasLimit <= 0) {
             revert GasLimitZero();
         }
 
-        _gasLimitPropagateRoot = _opGasLimit;
+        _gasLimitPropagateRoot = _starkGasLimit;
 
-        emit SetGasLimitPropagateRoot(_opGasLimit);
+        emit SetGasLimitPropagateRoot(_starkGasLimit);
     }
 
     /// @notice Sets the gas limit for the SetRootHistoryExpiry method
     /// @param _opGasLimit The new gas limit for the SetRootHistoryExpiry method
-    function setGasLimitSetRootHistoryExpiry(uint32 _opGasLimit) external onlyOwner {
-        if (_opGasLimit <= 0) {
+    function setGasLimitSetRootHistoryExpiry(uint32 _starkGasLimit) external onlyOwner {
+        if (_starkGasLimit <= 0) {
             revert GasLimitZero();
         }
 
-        _gasLimitSetRootHistoryExpiry = _opGasLimit;
+        _gasLimitSetRootHistoryExpiry = _starkGasLimit;
 
-        emit SetGasLimitSetRootHistoryExpiry(_opGasLimit);
+        emit SetGasLimitSetRootHistoryExpiry(_starkGasLimit);
     }
 
     /// @notice Sets the gas limit for the transferOwnershipOp method
