@@ -35,4 +35,5 @@ Note: the library implementation cover the bare necessities to complete the pair
 
 
 ## Run Tests
-`snforge test --detailed-resources --max-n-steps 1000000000`
+```bash
+snforge test --detailed-resources --max-n-steps 1000000000
