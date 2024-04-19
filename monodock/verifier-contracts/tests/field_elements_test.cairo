@@ -1,4 +1,12 @@
-use verifier::field_elements::{FQ12, FQ12Trait};
+use verifier::field_elements::{FQ12, FQ12Trait, FQ2, FQTrait};
+
+#[test]
+fn test_fq2_mul() {
+    let p1 = FQ2{a: FQTrait::from(2), b: FQTrait::from(3)};
+    let p2 = FQ2{a: FQTrait::from(4), b: FQTrait::from(5)};
+    let result = p1 * p2;
+    println!("Result: {:?}", result);
+}
 
 #[test]
 fn test_fq12_mul() {

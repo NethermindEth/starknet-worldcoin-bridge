@@ -76,8 +76,23 @@ impl FQEq of PartialEq<FQ> {
 }
 
 #[derive(Clone, Default, Debug, Drop)]
+struct FQ2 {
+    a: FQ,
+    b: FQ,
+}
+
+
+#[derive(Clone, Default, Debug, Drop)]
 struct FQ12 {
     coeffs: Array<u256>,
+}
+
+impl FQ2Mul of Mul<FQ2> {
+    fn mul(lhs: FQ2, rhs: FQ2) -> FQ2 {
+        let c0 = lhs.a * lhs.b - rhs.a * rhs.b;
+        let c1 = lhs.a * rhs.b + lhs.b * rhs.a;
+        FQ2 { a: c0, b: c1 }
+    }
 }
 
 #[generate_trait]
