@@ -1,7 +1,7 @@
 use core::option::OptionTrait;
 use core::array::ArrayTrait;
 use core::integer::{u256_checked_add, u256_checked_sub, u256_wide_mul, u512_safe_divmod_by_u256};
-use verifier::math::{U256PowerTrait, wide_mul_mod, max};
+use verifier::math::{U256PowerTrait, wide_mul_mod, max, add_mod};
 
 const P: u256 = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
@@ -24,6 +24,11 @@ impl FQImplementation of FQTrait {
     fn zero() -> FQ {
         FQ { n: 0 }
     }
+
+    fn one() -> FQ {
+        FQ { n: 1 }
+    }
+
 
     fn is_zero(self: FQ) -> bool {
         self.n == 0
@@ -81,11 +86,27 @@ struct FQ2 {
     b: FQ,
 }
 
+#[generate_trait]
+impl FQ2Implementation of FQ2Trait {
+    fn from (a: u256, b: u256) -> FQ2 {
+        FQ2 { a: FQTrait::from(a), b: FQTrait::from(b) }
+    }
 
-#[derive(Clone, Default, Debug, Drop)]
-struct FQ12 {
-    coeffs: Array<u256>,
+    fn one() -> FQ2 {
+        FQ2 { a: FQTrait::one(), b: FQTrait::zero() }
+    }
+
+    fn zero() -> FQ2 {
+        FQ2 { a: FQTrait::zero(), b: FQTrait::zero() }
+    }
 }
+
+impl FQ2Add of Add<FQ2> {
+    fn add(lhs: FQ2, rhs: FQ2) -> FQ2 {
+        FQ2 { a: lhs.a + rhs.a, b: lhs.b + rhs.b }
+    }
+}
+
 
 impl FQ2Mul of Mul<FQ2> {
     fn mul(lhs: FQ2, rhs: FQ2) -> FQ2 {
@@ -93,6 +114,11 @@ impl FQ2Mul of Mul<FQ2> {
         let c1 = lhs.a * rhs.b + lhs.b * rhs.a;
         FQ2 { a: c0, b: c1 }
     }
+}
+
+#[derive(Clone, Default, Debug, Drop)]
+struct FQ12 {
+    coeffs: Array<u256>,
 }
 
 #[generate_trait]
@@ -105,6 +131,8 @@ impl FQ12mplementation of FQ12Trait {
         FQ12 { coeffs: array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
     }
 }
+
+
 
 impl FQ12Mul of Mul<FQ12> {
     fn mul(lhs: FQ12, rhs: FQ12) -> FQ12 {
