@@ -1,3 +1,4 @@
+use core::option::OptionTrait;
 use core::array::ArrayTrait;
 use core::integer::{u256_checked_add, u256_checked_sub, u256_wide_mul, u512_safe_divmod_by_u256};
 use verifier::math::{U256PowerTrait, wide_mul_mod, max};
@@ -137,7 +138,15 @@ impl FQ12Mul of Mul<FQ12> {
             };
             i += 1;
         };
-        FQ12 { coeffs: result }
+        let mut i: usize =  12;
+        let mut out: Array<u256> = array![];
+        while i > 0 {
+            let elem = result.pop_front().unwrap();
+            out.append(elem);
+            i -= 1;
+        };
+
+        FQ12 { coeffs: out }
     }
 }
 
