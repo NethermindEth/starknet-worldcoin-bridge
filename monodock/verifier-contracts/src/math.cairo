@@ -80,6 +80,15 @@ fn wide_mul_mod(lhs: u256, rhs: u256) -> u256 {
     res
 }
 
+fn add_mod(lhs: u256, rhs: u256) -> u256 {
+    let sum = lhs + rhs;
+    if sum >= P {
+        sum - P
+    } else {
+        sum
+    }
+}
+
 fn max(a: usize, b: usize) -> usize {
     if a > b {
         a
