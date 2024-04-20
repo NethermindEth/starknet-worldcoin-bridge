@@ -1,4 +1,4 @@
-use verifier::field_elements::{FQ12, FQ12Trait, FQ2, FQTrait, FQ2Trait};
+use verifier::field_elements::{FQ12, FQ12Trait, FQ2, FQTrait, FQ2Trait, deg, poly_rounded_div};
 use verifier::utils::testing::assert_array_result;
 
 #[test]
@@ -130,3 +130,61 @@ fn test_fq12_pow() {
     assert_array_result(result.coeffs, expected.coeffs);
 }
 
+#[test]
+fn test_deg() {
+    let p1 = FQ12Trait::from(
+        array![
+            82,
+            0,
+            0,
+            0,
+            0,
+            0,
+            21888242871839275222246405745257275088696311157297823662689037894645226208565,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+        ]
+    );
+    let res = deg(p1.coeffs);
+    assert!(res == 12, "Expected: 6, got: {}", res);
+}
+
+#[test]
+fn test_poly_rounded_div() {
+    let p1 = array![
+        82,
+        0,
+        0,
+        0,
+        0,
+        0,
+        21888242871839275222246405745257275088696311157297823662689037894645226208565,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ];
+    let p2: Array<u256> = array![
+        82,
+        0,
+        0,
+        0,
+        0,
+        0,
+        21888242871839275222246405745257275088696311157297823662689037894645226208565,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+    ];
+    let res = poly_rounded_div(p2, p1);
+    assert!(res == array![1], "Expected: 1, got: {:?}", res)
+}
