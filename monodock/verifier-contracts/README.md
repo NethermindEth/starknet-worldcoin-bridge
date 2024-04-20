@@ -13,9 +13,13 @@ Note: the library implementation cover the bare necessities to complete the pair
   - [x] div()
   - [x] pow()
   - [x] double()
+- FQ2
+  - [x] mul()
+  - [x] add()
 - FQ12 type: 
   - [] add() 🛠️
   - [x] mul()
+  - [x] pow() 🛠️
 - G1Point:
   - [x] add()
   - [x] double
