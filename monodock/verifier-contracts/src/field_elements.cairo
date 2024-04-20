@@ -1,6 +1,9 @@
+use core::array::ArrayTrait;
 use core::integer::{u256_checked_add, u256_checked_sub, u256_wide_mul, u512_safe_divmod_by_u256};
 use verifier::utils::math::{U256PowerTrait, wide_mul_mod, max, add_mod, sub_mod};
-use verifier::utils::vec::{Felt252Vec, VecTrait, create_zero_values_dict, dict_to_u256_array};
+use verifier::utils::vec::{
+    Felt252Vec, VecTrait, create_zero_values_dict, dict_to_u256_array, u256_array_to_dict
+};
 
 const P: u256 = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
@@ -98,11 +101,29 @@ impl FQ2Implementation of FQ2Trait {
     fn is_zero(self: FQ2) -> bool {
         self.a.is_zero() && self.b.is_zero()
     }
+
+    fn pow(self: FQ2, exp: u256) -> FQ2 {
+        if exp.is_zero() {
+            return FQ2Trait::one();
+        } else if exp == 1 {
+            return self;
+        } else if exp % 2 == 0 {
+            return (self.clone() * self.clone()).pow(exp / 2);
+        } else {
+            return (self.clone() * (self.clone()).pow(exp / 2)) * self.clone();
+        }
+    }
 }
 
 impl FQ2Add of Add<FQ2> {
     fn add(lhs: FQ2, rhs: FQ2) -> FQ2 {
         FQ2 { a: lhs.a + rhs.a, b: lhs.b + rhs.b }
+    }
+}
+
+impl FQ2Sub of Sub<FQ2> {
+    fn sub(lhs: FQ2, rhs: FQ2) -> FQ2 {
+        FQ2 { a: lhs.a - rhs.a, b: lhs.b - rhs.b }
     }
 }
 
@@ -154,6 +175,10 @@ impl FQ12mplementation of FQ12Trait {
             return (self.clone() * (self.clone()).pow(exp / 2)) * self.clone();
         }
     }
+// fn inv(self: FQ12) -> FQ12 {
+//     let lm: Array<u256> = array![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+//     let hm: Array<u256> = array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+// }
 }
 
 impl FQ12Mul of Mul<FQ12> {
@@ -209,9 +234,63 @@ impl FQ12Mul of Mul<FQ12> {
                 i += 1;
             };
         };
-        let out = dict_to_u256_array(ref low_values, ref high_values);
+        let out = dict_to_u256_array(ref low_values, ref high_values, 12);
 
         FQ12 { coeffs: out }
     }
 }
 
+fn deg(p: Array<u256>) -> usize {
+    let mut i: usize = p.len() - 1;
+    let mut res = 0;
+    while (i > 0) {
+        if !(*p.at(i)).is_zero() {
+            res = i;
+            break;
+        }
+        i -= 1;
+    };
+    return res;
+}
+
+fn poly_rounded_div(mut a: Array<u256>, mut b: Array<u256>) -> Array<u256> {
+    let dega = deg(a.clone());
+    let degb = deg(b.clone());
+
+    let (mut temp_low, mut temp_high) = u256_array_to_dict(ref a);
+
+    let (mut b_low, mut b_high) = u256_array_to_dict(ref b);
+
+    let (mut o_low, mut o_high) = create_zero_values_dict(temp_low.len());
+
+    let mut i: usize = dega - degb;
+    while (i >= 0) {
+        let nom = u256 {
+            low: temp_low.get(degb + i).unwrap(), high: temp_high.get(degb + i).unwrap()
+        };
+        let denom = u256 { low: b_low.get(degb).unwrap(), high: b_high.get(degb).unwrap() };
+        let new_value = nom / denom;
+        let o_i = u256 { low: o_low.get(i).unwrap(), high: o_high.get(i).unwrap() };
+        let amount_to_add = o_i + new_value;
+        o_low.set(i, amount_to_add.low);
+        o_high.set(i, amount_to_add.high);
+
+        let mut c = 0;
+        while (c < degb + 1) {
+            let temp_ci = u256 {
+                low: temp_low.get(i + c).unwrap(), high: temp_high.get(i + c).unwrap()
+            };
+            let o_c = u256 { low: o_low.get(c).unwrap(), high: o_high.get(c).unwrap() };
+            let new_value = sub_mod(temp_ci, o_c);
+            temp_low.set(i + c, new_value.low);
+            temp_high.set(i + c, new_value.high);
+            c += 1;
+        };
+        if i == 0 {
+            break;
+        }
+        i -= 1;
+    };
+    let final_o = dict_to_u256_array(ref o_low, ref o_high, 12);
+    dict_to_u256_array(ref o_low, ref o_high, deg(final_o) + 1)
+}
