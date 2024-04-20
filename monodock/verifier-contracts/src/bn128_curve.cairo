@@ -1,6 +1,6 @@
 use core::integer::{u256_wide_mul, u512_safe_divmod_by_u256, u512};
-use verifier::math::U256PowerTrait;
-use verifier::field_elements::{FQ, FQ12, FQTrait, FQ12Trait};
+use verifier::utils::math::U256PowerTrait;
+use verifier::field_elements::{FQ, FQ2, FQ12, FQTrait, FQ2Trait, FQ12Trait};
 
 const P: u256 = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 const N: u256 = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
@@ -9,6 +9,18 @@ const N: u256 = 2188824287183927522224640574525727508854836440041603434369820418
 struct G1Point {
     x: FQ,
     y: FQ,
+}
+
+#[derive(Copy, Debug, Default, Drop)]
+struct G2Point {
+    x: FQ2,
+    y: FQ2,
+}
+
+#[derive(Drop, Default, Debug)]
+struct G12Point {
+    x: FQ12,
+    y: FQ12,
 }
 
 #[generate_trait]
@@ -38,17 +50,52 @@ impl G1PointImpl of G1PointTrait {
         multiply(self, scalar)
     }
 
-    fn is_on_curve(self: G1Point, b: u256) -> bool {
+    fn is_on_curve(self: G1Point, b: FQ) -> bool {
         if self.is_zero() {
             return true;
         }
         let x = self.x;
         let y = self.y;
-        y.pow(2) - x.pow(3) == FQTrait::from(b)
+        y.pow(2) - x.pow(3) == b
     }
 
     fn is_zero(self: G1Point) -> bool {
         self.x.is_zero() && self.y.is_zero()
+    }
+}
+
+#[generate_trait]
+impl G2PointImpl of G2PointTrait {
+    fn from(a_x: u256, a_y: u256, b_x: u256, b_y: u256) -> G2Point {
+        G2Point { x: FQ2Trait::from(a_x, a_y), y: FQ2Trait::from(b_x, b_y) }
+    }
+
+    fn is_on_curve(self: G2Point, b: FQ2) -> bool {
+        if self.is_zero() {
+            return true;
+        }
+        let x = self.x;
+        let y = self.y;
+        y.pow(2) - x.pow(3) == b
+    }
+
+    fn zero() -> G2Point {
+        G2Point { x: FQ2Trait::zero(), y: FQ2Trait::zero() }
+    }
+
+    fn is_zero(self: G2Point) -> bool {
+        self.x.is_zero() && self.y.is_zero()
+    }
+}
+
+#[generate_trait]
+impl G12PointImpl of G12PointTrait {
+    fn from(x: FQ12, y: FQ12) -> G12Point {
+        G12Point { x, y }
+    }
+
+    fn zero() -> G12Point {
+        G12Point { x: FQ12Trait::zero(), y: FQ12Trait::zero() }
     }
 }
 
@@ -130,6 +177,27 @@ fn multiply(mut point: G1Point, mut scalar: u256) -> G1Point {
     result
 }
 
+fn twist(pt: G2Point,) -> G12Point {
+    if pt.is_zero() {
+        return G12PointTrait::zero();
+    }
+
+    let x = pt.x;
+    let y = pt.y;
+    // Field isomorphism from Z[p] / x**2 to Z[p] / x**2 - 18*x + 82
+    let xcoeff_0 = x.a - x.b * FQTrait::from(9);
+    let xcoeff_1 = x.b;
+    let ycoeff_0 = y.a - y.b * FQTrait::from(9);
+    let ycoeff_1 = y.b;
+    // Isomorphism into subfield of Z[p] / w**12 - 18 * w**6 + 82, where w**6 = x
+    let nx = FQ12 { coeffs: array![xcoeff_0.n, 0, 0, 0, 0, 0, xcoeff_1.n, 0, 0, 0, 0, 0] };
+    let ny = FQ12 { coeffs: array![ycoeff_0.n, 0, 0, 0, 0, 0, ycoeff_1.n, 0, 0, 0, 0, 0] };
+    // "Twist" a point in E(FQ2) into a point in E(FQ12)
+    let w = FQ12 { coeffs: array![0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
+    G12Point { x: nx * w.clone().pow(2), y: ny * w.pow(3) }
+}
+
+
 fn cast_point_to_fq12(pt: G1Point) -> G12Point {
     if pt.is_zero() {
         return G12Point { x: FQ12Trait::zero(), y: FQ12Trait::zero() };
@@ -150,11 +218,5 @@ impl G1PointPartialEq of PartialEq<G1Point> {
     fn ne(lhs: @G1Point, rhs: @G1Point) -> bool {
         !(lhs == rhs)
     }
-}
-
-#[derive(Drop, Default, Debug)]
-struct G12Point {
-    x: FQ12,
-    y: FQ12,
 }
 
