@@ -1,3 +1,4 @@
+use core::option::OptionTrait;
 use core::integer::u32_wrapping_add;
 use core::nullable::NullableImpl;
 //! Vec implementation.
@@ -194,13 +195,27 @@ fn create_zero_values_dict(n: usize) -> (Felt252Vec<u128>, Felt252Vec<u128>) {
     (low_values, high_values)
 }
 
-fn dict_to_u256_array(ref low: Felt252Vec<u128>, ref high: Felt252Vec<u128>) -> Array<u256> {
+fn dict_to_u256_array(
+    ref low: Felt252Vec<u128>, ref high: Felt252Vec<u128>, deg: usize
+) -> Array<u256> {
     let mut out: Array<u256> = array![];
     let mut i: usize = 0;
-    while (i < 12) {
+    while (i < deg) {
         let element = u256 { low: low.get(i).unwrap(), high: high.get(i).unwrap() };
         out.append(element);
         i += 1;
     };
     out
+}
+
+fn u256_array_to_dict(ref array: Array<u256>) -> (Felt252Vec<u128>, Felt252Vec<u128>) {
+    let mut low_values: Felt252Vec<u128> = VecTrait::new();
+    let mut high_values: Felt252Vec<u128> = VecTrait::new();
+
+    while (!array.len().is_zero()) {
+        let element = array.pop_front().unwrap();
+        low_values.push(element.low);
+        high_values.push(element.high);
+    };
+    (low_values, high_values)
 }
