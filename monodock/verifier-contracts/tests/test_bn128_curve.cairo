@@ -1,4 +1,4 @@
-use verifier::elliptic_curve::{G1Point, G1PointTrait};
+use verifier::bn128_curve::{G1Point, G1PointTrait};
 
 #[test]
 fn test_add_points() {
@@ -28,6 +28,21 @@ fn test_multiply() {
     let expected = G1PointTrait::from(
         3861037894114278668595409444906817726575053864681695378417542742205555505462,
         5745432420201670217197308560270956754202904136371512334037640114883269905931
+    );
+    let result = A.mul(n);
+    assert!(result == expected, "Test: test_multiply, expected {:?}, got {:?}", expected, result);
+}
+
+#[test]
+fn test_multiply_small_scalar() {
+    let A = G1PointTrait::from(
+        14865918005176722116473730206622066845866539143554731094374354951675249722731,
+        3197770568483953664363740385883457803041685902965668289308665954510373380344
+    );
+    let n = 2;
+    let expected = G1PointTrait::from(
+        3490312067382919991484053836234422823589768489538428366852965728895214559981,
+        1954488015891974622446033348111698223759289315482775051782896635882131892284
     );
     let result = A.mul(n);
     assert!(result == expected, "Test: test_multiply, expected {:?}, got {:?}", expected, result);
