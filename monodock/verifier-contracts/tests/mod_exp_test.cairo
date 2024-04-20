@@ -1,4 +1,4 @@
-use verifier::math::mod_exp;
+use verifier::utils::math::mod_exp;
 
 #[derive(Copy, Drop)]
 struct Input {

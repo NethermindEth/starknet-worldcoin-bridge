@@ -1,4 +1,4 @@
-use core::integer::{u256_wide_mul, u512_safe_divmod_by_u256};
+use core::integer::{u256_wide_mul, u512_safe_divmod_by_u256, u256_checked_sub, u256_checked_add};
 use verifier::field_elements::P;
 
 /// Performs modular exponentiation on `base` raised to `exp`, mod `P`.
@@ -81,12 +81,11 @@ fn wide_mul_mod(lhs: u256, rhs: u256) -> u256 {
 }
 
 fn add_mod(lhs: u256, rhs: u256) -> u256 {
-    let sum = lhs + rhs;
-    if sum >= P {
-        sum - P
-    } else {
-        sum
-    }
+    u256_checked_add(lhs, rhs).expect('u256_add Overflow') % P
+}
+
+fn sub_mod(lhs: u256, rhs: u256) -> u256 {
+    (lhs + P - rhs) % P
 }
 
 fn max(a: usize, b: usize) -> usize {
