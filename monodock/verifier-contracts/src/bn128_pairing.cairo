@@ -1,5 +1,5 @@
-use verifier::elliptic_curve::{G1Point, G1PointTrait};
-use verifier::math::U256PowerTrait;
+use verifier::bn128_curve::{G1Point, G1PointTrait};
+use verifier::utils::math::U256PowerTrait;
 use core::integer::{u256_wide_mul, u512_safe_divmod_by_u256, u512};
 use verifier::field_elements::{FQ, FQTrait};
 
@@ -28,7 +28,7 @@ fn linefunc(p1: G1Point, p2: G1Point, t: G1Point) -> FQ {
 #[cfg(test)]
 mod tests {
     use super::linefunc;
-    use verifier::elliptic_curve::{G1Point, G1PointTrait};
+    use verifier::bn128_curve::{G1Point, G1PointTrait};
 
     #[test]
     fn test_linefunc() {
