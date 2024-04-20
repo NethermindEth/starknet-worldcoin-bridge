@@ -1,7 +1,6 @@
-use core::option::OptionTrait;
-use core::array::ArrayTrait;
 use core::integer::{u256_checked_add, u256_checked_sub, u256_wide_mul, u512_safe_divmod_by_u256};
-use verifier::math::{U256PowerTrait, wide_mul_mod, max, add_mod};
+use verifier::utils::math::{U256PowerTrait, wide_mul_mod, max, add_mod, sub_mod};
+use verifier::utils::vec::{Felt252Vec, VecTrait, create_zero_values_dict, dict_to_u256_array};
 
 const P: u256 = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
@@ -41,33 +40,29 @@ impl FQImplementation of FQTrait {
 
 impl FQAdd of Add<FQ> {
     fn add(lhs: FQ, rhs: FQ) -> FQ {
-        let n = u256_checked_add(lhs.n, rhs.n).expect('u256_add Overflow') % P;
-        FQ { n: n }
+        let n = add_mod(lhs.n, rhs.n);
+        FQ { n }
     }
 }
 
 impl FQSub of Sub<FQ> {
     fn sub(lhs: FQ, rhs: FQ) -> FQ {
-        let n = u256_checked_sub(lhs.n + P, rhs.n).expect('u256_sub Overflow') % P;
-        FQ { n: n }
+        let n = sub_mod(lhs.n, rhs.n);
+        FQ { n }
     }
 }
 
 impl FQMul of Mul<FQ> {
     fn mul(lhs: FQ, rhs: FQ) -> FQ {
-        let (_, res, _, _, _, _, _) = u512_safe_divmod_by_u256(
-            u256_wide_mul(lhs.n, rhs.n), P.try_into().unwrap()
-        );
+        let res = wide_mul_mod(lhs.n, rhs.n);
         FQ { n: res }
     }
 }
 
 impl FQDiv of Div<FQ> {
     fn div(lhs: FQ, rhs: FQ) -> FQ {
-        let (_, res, _, _, _, _, _) = u512_safe_divmod_by_u256(
-            u256_wide_mul(lhs.n, rhs.n.inverse()), P.try_into().unwrap()
-        );
-        FQ { n: res }
+        let n = wide_mul_mod(lhs.n, rhs.n.inverse());
+        FQ { n }
     }
 }
 
@@ -80,7 +75,7 @@ impl FQEq of PartialEq<FQ> {
     }
 }
 
-#[derive(Clone, Default, Debug, Drop)]
+#[derive(Copy, Default, Debug, Drop)]
 struct FQ2 {
     a: FQ,
     b: FQ,
@@ -88,7 +83,7 @@ struct FQ2 {
 
 #[generate_trait]
 impl FQ2Implementation of FQ2Trait {
-    fn from (a: u256, b: u256) -> FQ2 {
+    fn from(a: u256, b: u256) -> FQ2 {
         FQ2 { a: FQTrait::from(a), b: FQTrait::from(b) }
     }
 
@@ -98,6 +93,10 @@ impl FQ2Implementation of FQ2Trait {
 
     fn zero() -> FQ2 {
         FQ2 { a: FQTrait::zero(), b: FQTrait::zero() }
+    }
+
+    fn is_zero(self: FQ2) -> bool {
+        self.a.is_zero() && self.b.is_zero()
     }
 }
 
@@ -116,6 +115,15 @@ impl FQ2Mul of Mul<FQ2> {
     }
 }
 
+impl FQ2Eq of PartialEq<FQ2> {
+    fn eq(lhs: @FQ2, rhs: @FQ2) -> bool {
+        lhs.a == rhs.a && lhs.b == rhs.b
+    }
+    fn ne(lhs: @FQ2, rhs: @FQ2) -> bool {
+        !PartialEq::eq(lhs, rhs)
+    }
+}
+
 #[derive(Clone, Default, Debug, Drop)]
 struct FQ12 {
     coeffs: Array<u256>,
@@ -123,6 +131,10 @@ struct FQ12 {
 
 #[generate_trait]
 impl FQ12mplementation of FQ12Trait {
+    fn from(coeffs: Array<u256>) -> FQ12 {
+        FQ12 { coeffs: coeffs }
+    }
+
     fn one() -> FQ12 {
         FQ12 { coeffs: array![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
     }
@@ -130,64 +142,74 @@ impl FQ12mplementation of FQ12Trait {
     fn zero() -> FQ12 {
         FQ12 { coeffs: array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
     }
+
+    fn pow(self: FQ12, exp: u256) -> FQ12 {
+        if exp.is_zero() {
+            return FQ12Trait::one();
+        } else if exp == 1 {
+            return self;
+        } else if exp % 2 == 0 {
+            return (self.clone() * self.clone()).pow(exp / 2);
+        } else {
+            return (self.clone() * (self.clone()).pow(exp / 2)) * self.clone();
+        }
+    }
 }
-
-
 
 impl FQ12Mul of Mul<FQ12> {
     fn mul(lhs: FQ12, rhs: FQ12) -> FQ12 {
-        let mut result: Array<u256> = array![];
+        let (mut low_values, mut high_values) = create_zero_values_dict(24);
         // # Process each coefficient of the first polynomial
+        let fq12_coeffs: Array<u256> = array![
+            82,
+            0,
+            0,
+            0,
+            0,
+            0,
+            21888242871839275222246405745257275088696311157297823662689037894645226208565,
+            0,
+            0,
+            0,
+            0,
+            0
+        ];
         let mut i: usize = 0;
         while (i < 12) {
-            let mut new_row: Array<u256> = array![];
-
-            let mut i_i = i;
-            while i_i > 0 {
-                new_row.append(0);
-                i_i -= 1;
-            };
             let mut j: usize = 0;
             let lhs_copy = lhs.clone();
             let rhs_copy = rhs.clone();
             while (j < 12) {
-                // TODO: Optimize this for gas using pop_front() instead of at.
-                new_row.append(wide_mul_mod(*lhs_copy.coeffs.at(i), *rhs_copy.coeffs.at(j)));
-                j += 1;
-            };
-
-            if result.len().is_zero() {
-                result = new_row;
-            } else {
-                let mut combined: Array<u256> = array![];
-                let mut max_length = max(result.len(), new_row.len());
-                let mut k: usize = 0;
-                loop {
-                    if max_length == 0 {
-                        break;
-                    }
-                    // TODO: Optimize this for gas using pop_front() instead of at.
-                    if k < result.len() && k < new_row.len() {
-                        combined.append(*result.at(k) + *new_row.at(k));
-                    } else if k < result.len() {
-                        combined.append(*result.at(k));
-                    } else {
-                        combined.append(*new_row.at(k));
-                    }
-                    k += 1;
-                    max_length -= 1;
+                let value = u256 {
+                    low: low_values.get(i + j).unwrap(), high: high_values.get(i + j).unwrap()
                 };
-                result = combined;
+                let element = add_mod(
+                    value, wide_mul_mod(*lhs_copy.coeffs.at(i), *rhs_copy.coeffs.at(j))
+                );
+                low_values.set(i + j, element.low);
+                high_values.set(i + j, element.high);
+                j += 1;
             };
             i += 1;
         };
-        let mut i: usize =  12;
-        let mut out: Array<u256> = array![];
-        while i > 0 {
-            let elem = result.pop_front().unwrap();
-            out.append(elem);
-            i -= 1;
+        // # Reduce the result 
+        while (low_values.len() > 12) {
+            let exp = low_values.len() - 13;
+            let top = u256 { low: low_values.pop().unwrap(), high: high_values.pop().unwrap() };
+            let mut i: usize = 0;
+            let field_coeffs = fq12_coeffs.clone();
+            while (i < 12) {
+                let element = u256 {
+                    low: low_values.get(i + exp).unwrap(), high: high_values.get(i + exp).unwrap()
+                };
+                let sub_value = wide_mul_mod(top, *field_coeffs.at(i));
+                let new_value = (element + P - sub_value) % P;
+                low_values.set(i + exp, new_value.low);
+                high_values.set(i + exp, new_value.high);
+                i += 1;
+            };
         };
+        let out = dict_to_u256_array(ref low_values, ref high_values);
 
         FQ12 { coeffs: out }
     }
