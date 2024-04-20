@@ -7,34 +7,40 @@ Note: the library implementation cover the bare necessities to complete the pair
 
 ## Lis Of Task
 - FQ type:
-  - [x] add()
-  - [x] sub()
-  - [x] mul()
-  - [x] div()
-  - [x] pow()
-  - [x] double()
-- FQ2
-  - [x] mul()
-  - [x] add()
-- FQ12 type: 
-  - [] add() 🛠️
-  - [x] mul()
-  - [x] pow() 🛠️
-- G1Point:
-  - [x] add()
+  - [x] add
+  - [x] sub
+  - [x] mul
+  - [x] div
+  - [x] pow
   - [x] double
-  - [x] scalar mul()
-  - [x] is_on_curve()
-  - [x] cast_point_to_fq12()
-  - [] twist() 🛠️
+- FQ2
+  - [x] mul
+  - [x] add
+  - [x] pow
+  - [x] sub 
+- FQ12 type: 
+  - [] add 🛠️
+  - [x] mul
+  - [x] pow 
+  - [ ] linefunc 🛠️
+  - [ ] inv 🛠️
+  - [x] deg
+  - [x] poly_rounded_div
+- G1Point:
+  - [x] add
+  - [x] double
+  - [x] scalar mul
+  - [x] is_on_curve
+  - [x] cast_point_to_fq12
+  - [] twist 🛠️
 - G2Point
-  - [] twist() 🛠️
-  - [] is_on_curve() 🛠️
+  - [x] twist 🛠️
+  - [x] is_on_curve
 - G12Point
-  - linefunc() 🛠️
+  - linefunc 🛠️
 - Pairing
-  - [] miller_loop() 🛠️
-  - [] pairing() 🛠️
+  - [] miller_loop 🛠️
+  - [] pairing 🛠️
 - [] Semaphore Verifier Contract 🛠️
 
 
