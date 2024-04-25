@@ -2,10 +2,6 @@
 version = 1
 
 [[package]]
-name = "bn"
-version = "0.1.0"
-
-[[package]]
 name = "snforge_std"
 version = "0.22.0"
 source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.22.0#9b215944c6c5871c738381b4ded61bbf06e7ba35"
@@ -14,6 +10,5 @@ source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.22.0#9b21594
 name = "verifier"
 version = "0.1.0"
 dependencies = [
- "bn",
  "snforge_std",
 ]
