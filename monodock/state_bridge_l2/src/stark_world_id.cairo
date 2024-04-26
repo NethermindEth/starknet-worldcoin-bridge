@@ -1,35 +1,36 @@
 pub mod interface_stark_world_id;
-mod cross_domain_ownable;
+pub mod cross_domain_ownable;
 pub mod world_id_bridge; 
 
 //  TODO: Add CrossDomainMessenger
 #[starknet::contract]
 pub mod StarkWorldID {
     use super::world_id_bridge::WorldID;
+    use super::cross_domain_ownable::CrossDomainOwnable;
     pub use super::interface_stark_world_id;
     pub use super::interface_stark_world_id::IStarkWorldIDDispatcher;
-    use openzeppelin::access::ownable::OwnableComponent;
-    use starknet::get_caller_address;
+    //use openzeppelin::access::ownable::OwnableComponent;
+    use starknet::{EthAddress,get_caller_address};
 
     component!(path: WorldID, storage: world_id_storage, event: WorldIDEvent);
-    component!(path: OwnableComponent , storage: ownable_storage, event: OwnableEvent);
+    component!(path: CrossDomainOwnable, storage: cross_domain_ownable_storage, event: CrossDomainOwnableEvent);
 
     // External Components
     #[abi(embed_v0)]
     impl WorldIDImpl = WorldID::WorldIDImpl<ContractState>;
     #[abi(embed_v0)]
     impl WorldIDImplVerify = WorldID::WorldIDImplVerify<ContractState>;
-    #[abi(embed_v0)]
-    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>; 
+    //#[abi(embed_v0)]
+    //impl CrossDomainOwnableImpl = CrossDomainOwnable::CrossDomainOwnableImpl<ContractState>; 
 
     // Internal Components
     impl WorldIDInternalImpl = WorldID::InternalImpl<ContractState>; 
-    impl OwnableInernalImpl = OwnableComponent::InternalImpl<ContractState>; 
+    //impl OwnableInernalImpl = OwnableComponent::InternalImpl<ContractState>; 
 
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        ownable_storage: OwnableComponent::Storage,
+        cross_domain_ownable_storage: CrossDomainOwnable::Storage,
 
         #[substorage(v0)]
         world_id_storage: WorldID::Storage,
@@ -39,15 +40,14 @@ pub mod StarkWorldID {
     #[derive(Drop, starknet::Event)]
     enum Event {
         WorldIDEvent: WorldID::Event,
-        OwnableEvent: OwnableComponent::Event
+        CrossDomainOwnableEvent: CrossDomainOwnable::Event
     }
 
     #[constructor]
     fn constructor(ref self: ContractState, tree_depth: u8) {
-        self.ownable_storage.initializer(get_caller_address()); 
+        //self.ownable_storage.initializer(get_caller_address()); 
         self.world_id_storage._intialize(tree_depth); 
     }
-    
     
     pub impl StarkWorldID of interface_stark_world_id::IStarkWorldID<ContractState> {
         ///////////////////////////////////////////////////////////////////////////////
@@ -65,7 +65,7 @@ pub mod StarkWorldID {
         /// @custom:reverts string If the caller is not the owner.
         #[l1_handler]
         fn receive_root(ref self: ContractState, new_root: u256) {
-            self.ownable_storage.assert_only_owner(); // onlyOwner
+            //self.ownable_storage.assert_only_owner(); // onlyOwner
             self.world_id_storage._receive_root(new_root); 
         }
 
@@ -80,7 +80,7 @@ pub mod StarkWorldID {
         /// @custom:reverts string If the caller is not the owner.
         #[l1_handler]
         fn set_root_history_expiry(ref self: ContractState, expiry_time: u256) {
-            self.ownable_storage.assert_only_owner(); // onlyOwner
+            //self.ownable_storage.assert_only_owner(); // onlyOwner
             self.world_id_storage._set_root_history_expiry(expiry_time); 
         }
     }
