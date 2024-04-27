@@ -9,7 +9,6 @@ pub mod StarkWorldID {
     use super::cross_domain_ownable::CrossDomainOwnable;
     pub use super::interface_stark_world_id;
     pub use super::interface_stark_world_id::IStarkWorldIDDispatcher;
-    //use openzeppelin::access::ownable::OwnableComponent;
     use starknet::{EthAddress,get_caller_address};
 
     component!(path: WorldID, storage: world_id_storage, event: WorldIDEvent);
@@ -20,18 +19,16 @@ pub mod StarkWorldID {
     impl WorldIDImpl = WorldID::WorldIDImpl<ContractState>;
     #[abi(embed_v0)]
     impl WorldIDImplVerify = WorldID::WorldIDImplVerify<ContractState>;
-    //#[abi(embed_v0)]
-    //impl CrossDomainOwnableImpl = CrossDomainOwnable::CrossDomainOwnableImpl<ContractState>; 
 
     // Internal Components
     impl WorldIDInternalImpl = WorldID::InternalImpl<ContractState>; 
-    //impl OwnableInernalImpl = OwnableComponent::InternalImpl<ContractState>; 
+    impl CrossDomainOwnableInternalImpl = CrossDomainOwnable::InternalImpl<ContractState>; 
+    impl CrossDomainOwnableImpl = CrossDomainOwnable::CrossDomainOwnableImpl<ContractState>; 
 
     #[storage]
     struct Storage {
         #[substorage(v0)]
         cross_domain_ownable_storage: CrossDomainOwnable::Storage,
-
         #[substorage(v0)]
         world_id_storage: WorldID::Storage,
     }
@@ -44,8 +41,8 @@ pub mod StarkWorldID {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, tree_depth: u8) {
-        //self.ownable_storage.initializer(get_caller_address()); 
+    fn constructor(ref self: ContractState, l1_address: EthAddress, tree_depth: u8) {
+        self.cross_domain_ownable_storage._initialize(l1_address); 
         self.world_id_storage._intialize(tree_depth); 
     }
     
@@ -64,8 +61,8 @@ pub mod StarkWorldID {
         /// @custom:reverts CannotOverwriteRoot If the root already exists in the root history.
         /// @custom:reverts string If the caller is not the owner.
         #[l1_handler]
-        fn receive_root(ref self: ContractState, new_root: u256) {
-            //self.ownable_storage.assert_only_owner(); // onlyOwner
+        fn receive_root(ref self: ContractState, from_address: felt252, new_root: u256) {
+            self.cross_domain_ownable_storage.only_cross_domain_owner(from_address); 
             self.world_id_storage._receive_root(new_root); 
         }
 
@@ -79,9 +76,14 @@ pub mod StarkWorldID {
         ///
         /// @custom:reverts string If the caller is not the owner.
         #[l1_handler]
-        fn set_root_history_expiry(ref self: ContractState, expiry_time: u256) {
-            //self.ownable_storage.assert_only_owner(); // onlyOwner
+        fn set_root_history_expiry(ref self: ContractState, from_address: felt252, expiry_time: u256) {
+            self.cross_domain_ownable_storage.only_cross_domain_owner(from_address); 
             self.world_id_storage._set_root_history_expiry(expiry_time); 
+        }
+
+        #[l1_handler]
+        fn transfer_ownership(ref self: ContractState, from_address: felt252, new_owner: EthAddress){
+            self.cross_domain_ownable_storage.transfer_ownership(from_address, new_owner); 
         }
     }
 }

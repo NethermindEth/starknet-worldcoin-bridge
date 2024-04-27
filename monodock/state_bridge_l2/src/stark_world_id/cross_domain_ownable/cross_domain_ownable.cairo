@@ -37,28 +37,31 @@ pub mod CrossDomainOwnable {
         new_l1_owner: EthAddress,
 
     }
+    #[generate_trait]
+    pub impl InternalImpl<TContractState, +HasComponent<TContractState>> of InternalTrait<TContractState> {
+        fn _initialize(ref self: ComponentState<TContractState>, owner: EthAddress) {
+
+            self.emit(NewL1Owner {previous_l1_owner: self.l1_owner.read(), new_l1_owner: owner});
+            self.l1_owner.write(owner); 
+        }
+    }
 
     pub impl CrossDomainOwnableImpl<TContractState, +HasComponent<TContractState>> of interface_cross_domain_ownable::ICrossDomainOwnable<ComponentState<TContractState>> {
-        #[l1_handler]
-        fn transfer_ownership(ref self: ComponentState<TContractState>, new_owner: EthAddress, isLocal: bool){
-            // assert(!new_owner.is_zero(), Errors::ZERO_ADDRESS_OWNER);
-            self.only_cross_domain_owner(); 
+        fn transfer_ownership(ref self: ComponentState<TContractState>, from_address: felt252, new_owner: EthAddress){
+            assert(new_owner.into() != zero, Errors::ZERO_ADDRESS_OWNER);
+            self.only_cross_domain_owner(from_address); 
             
             self.emit(NewL1Owner {previous_l1_owner: self.l1_owner.read(), new_l1_owner: new_owner});
             self.l1_owner.write(new_owner);
         }
 
-        #[l1_handler]   
         fn owner(self: @ComponentState<TContractState>) -> EthAddress{
             self.l1_owner.read()
         }
 
-        #[l1_handler]
-        fn only_cross_domain_owner(self: @ComponentState<TContractState>) {
-             let caller = get_caller_address();
-            
-            assert(caller.into() != zero, Errors::ZERO_ADDRESS_CALLER);
-            //assert(caller == self.l1_owner.read(), Errors::NOT_OWNER);
+        fn only_cross_domain_owner(self: @ComponentState<TContractState>, from_address: felt252) {
+            assert(from_address != zero, Errors::ZERO_ADDRESS_CALLER);
+            assert(from_address == self.l1_owner.read().into(), Errors::NOT_OWNER);
         }
     }
 }
