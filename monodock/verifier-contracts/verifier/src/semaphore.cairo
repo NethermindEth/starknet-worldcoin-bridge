@@ -1,5 +1,18 @@
+/// The `IVerifier` trait defines the interface for verifying a proof.
+///
+/// It is implemented by the `Verifier` contract.
 #[starknet::interface]
 trait IVerifier<TState> {
+    /// Verifies the given proof and inputs.
+    ///
+    /// # Arguments
+    ///
+    /// * `proof` - The proof to be verified.
+    /// * `inputs` - The inputs associated with the proof.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the proof is valid, `false` otherwise.
     fn verify_proof(self: @TState, proof: verifier::Proof, inputs: verifier::Input) -> bool;
 }
 
@@ -21,6 +34,16 @@ mod Verifier {
 
     #[abi(embed_v0)]
     impl VerifierImpl of super::IVerifier<ContractState> {
+        /// Verifies the given proof and inputs by performing EC pairings.
+        ///
+        /// # Arguments
+        ///
+        /// * `proof` - The proof to be verified.
+        /// * `inputs` - The inputs associated with the proof.
+        ///
+        /// # Returns
+        ///
+        /// Returns `true` if the proof is valid, `false` otherwise.
         fn verify_proof(self: @ContractState, proof: Proof, inputs: Input) -> bool {
             self.ec_pairings(proof, inputs)
         }
@@ -28,6 +51,16 @@ mod Verifier {
 
     #[generate_trait]
     impl Private of PrivateTrait {
+        /// Performs the EC pairings verification.
+        ///
+        /// # Arguments
+        ///
+        /// * `proof` - The proof to be verified.
+        /// * `inputs` - The inputs associated with the proof.
+        ///
+        /// # Returns
+        ///
+        /// Returns `true` if the proof is valid, `false` otherwise.
         fn ec_pairings(self: @ContractState, proof: Proof, inputs: Input) -> bool {
             // Verification key parameters
             let (_, _, gamma_neg, delta_neg, alphabeta_miller, _, _, _, _, _) = vk();
@@ -48,6 +81,18 @@ mod Verifier {
             true
         }
 
+        /// Computes the public input multi-scalar multiplication.
+        ///
+        /// # Arguments
+        ///
+        /// * `incl_root` - The inclusion root.
+        /// * `nullifier_hash` - The nullifier hash.
+        /// * `signal_hash` - The signal hash.
+        /// * `ext_nullifier_hash` - The external nullifier hash.
+        ///
+        /// # Returns
+        ///
+        /// Returns the result of the multi-scalar multiplication as an `AffineG1` point.
         fn public_input_multi_scalar_mul(
             self: @ContractState,
             incl_root: u256,
@@ -65,6 +110,15 @@ mod Verifier {
             ic_0.add(temp0).add(temp1).add(temp2).add(temp3)
         }
 
+        /// Extracts the proof parameters from the `Proof` struct.
+        ///
+        /// # Arguments
+        ///
+        /// * `proof` - The proof struct containing the proof parameters.
+        ///
+        /// # Returns
+        ///
+        /// Returns a tuple of `(AffineG1, AffineG2, AffineG1)` representing the proof parameters.
         fn proof(self: @ContractState, proof: Proof) -> (AffineG1, AffineG2, AffineG1) {
             (
                 g1(proof.a_x, proof.a_y),
@@ -73,6 +127,20 @@ mod Verifier {
             )
         }
 
+        /// Extracts the input values from the given `Input` struct and returns them as a tuple.
+        ///
+        /// # Arguments
+        ///
+        /// * `self` - A reference to the `ContractState` instance.
+        /// * `inputs` - The `Input` struct containing the input values.
+        ///
+        /// # Returns
+        ///
+        /// A tuple containing the extracted input values:
+        /// - `root`: The root value of type `u256`.
+        /// - `signal`: The signal value of type `u256`.
+        /// - `nullifier`: The nullifier value of type `u256`.
+        /// - `ext_nullifier`: The external nullifier value of type `u256`.
         fn inputs(self: @ContractState, inputs: Input) -> (u256, u256, u256, u256) {
             (inputs.root, inputs.signal, inputs.nullifier, inputs.ext_nullifier)
         }
