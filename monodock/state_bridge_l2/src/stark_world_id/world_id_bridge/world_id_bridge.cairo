@@ -26,6 +26,7 @@ pub mod WorldID {
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     const NULL_ROOT_TIME: u8 = 0;
+    
     #[storage]
     struct Storage {
         tree_depth: u8, // immutable

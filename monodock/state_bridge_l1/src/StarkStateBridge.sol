@@ -5,14 +5,17 @@ pragma solidity ^0.8.15;
 import {IStarkWorldID} from "./interfaces/IStarkWorldID.sol";
 import {IRootHistory} from "./interfaces/IRootHistory.sol";
 import {IWorldIDIdentityManager} from "./interfaces/IWorldIDIdentityManager.sol";
-import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
+//import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
+import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
+import "./starknet/StarknetMessaging.sol";
+import "./starknet/Constants.sol";
 import "./starknet/IStarknetMessaging.sol";
 
 /// @title World ID State Bridge Starknet
 /// @author Worldcoin
 /// @notice Distributes new World ID Identity Manager roots to Starknet network
 /// @dev This contract lives on Ethereum mainnet and works for Starknet 
-contract StarkStateBridge is Ownable2Step {
+contract StarkStateBridge is Ownable {
     ///////////////////////////////////////////////////////////////////
     ///                           STORAGE                           ///
     ///////////////////////////////////////////////////////////////////
@@ -23,6 +26,9 @@ contract StarkStateBridge is Ownable2Step {
     /// @notice Ethereum mainnet worldID Address
     address public immutable worldIDAddress;
 
+    /// @notice Starknet Cross Messaging Address
+    address public immutable snMessaging;
+
     /// @notice Amount of gas purchased on Starknet for propagateRoot
     uint32 internal _gasLimitPropagateRoot;
 
@@ -30,10 +36,10 @@ contract StarkStateBridge is Ownable2Step {
     uint32 internal _gasLimitSetRootHistoryExpiry;
 
     /// @notice Amount of gas purchased on Starknet for transferOwnershipOp
-    //uint32 internal _gasLimitTransferOwnership;
+    uint32 internal _gasLimitTransferOwnership;
 
     /// @notice The default gas limit amount to buy on Starknet to do simple transactions
-    uint32 public constant DEFAULT_OP_GAS_LIMIT = 1000000;
+    uint32 public constant DEFAULT_STARK_GAS_LIMIT = 1000000;
 
     ///////////////////////////////////////////////////////////////////
     ///                            EVENTS                           ///
@@ -67,7 +73,7 @@ contract StarkStateBridge is Ownable2Step {
 
     /// @notice Emitted when the StateBridge sets the gas limit for transferOwnershipOp
     /// @param _opGasLimit The new opGasLimit for transferOwnershipOptimism
-    //event SetGasLimitTransferOwnershipOp(uint32 _opGasLimit);
+    event SetGasLimitTransferOwnershipOp(uint32 _opGasLimit);
 
     ///////////////////////////////////////////////////////////////////
     ///                            ERRORS                           ///
@@ -88,24 +94,26 @@ contract StarkStateBridge is Ownable2Step {
 
     /// @notice constructor
     /// @param _worldIDIdentityManager Deployment address of the WorldID Identity Manager contract
-    /// @param _opWorldIDAddress Address of the Optimism contract that will receive the new root and timestamp
+    /// @param _starkWorldIDAddress Address of the Optimism contract that will receive the new root and timestamp
     /// Stack network
     /// @custom:revert if any of the constructor params addresses are zero
     constructor(
         address _worldIDIdentityManager,
-        address _starkWorldIDAddress
-    ) {
+        address _starkWorldIDAddress,
+        address _snMessaging
+    )  Ownable(msg.sender) {
         if (
             _worldIDIdentityManager == address(0) || _starkWorldIDAddress == address(0)
         ) {
             revert AddressZero();
         }
 
-        opWorldIDAddress = _opWorldIDAddress;
-        starkIDAddress = _starkWorldIDAddress;
-        _gasLimitPropagateRoot = DEFAULT_OP_GAS_LIMIT;
-        _gasLimitSetRootHistoryExpiry = DEFAULT_OP_GAS_LIMIT;
-        _gasLimitTransferOwnership = DEFAULT_OP_GAS_LIMIT;
+        starkWorldIDAddress = _starkWorldIDAddress;
+        worldIDAddress = _worldIDIdentityManager;
+        snMessaging = _snMessaging; 
+        _gasLimitPropagateRoot = DEFAULT_STARK_GAS_LIMIT;
+        _gasLimitSetRootHistoryExpiry = DEFAULT_STARK_GAS_LIMIT;
+        _gasLimitTransferOwnership = DEFAULT_STARK_GAS_LIMIT;
     }
 
     ///////////////////////////////////////////////////////////////////
@@ -116,9 +124,10 @@ contract StarkStateBridge is Ownable2Step {
     /// @dev Calls this method on the L1 Proxy contract to relay roots to the destination OP Stack chain
     function propagateRoot() external {
         uint256 latestRoot = IWorldIDIdentityManager(worldIDAddress).latestRoot();
+        uint256[] memory payload = new uint256[](1);
+        payload[0] = latestRoot; 
 
-        // TODO:
-
+        IStarknetMessaging(snMessaging).sendMessageToL2(uint256(uint160(starkWorldIDAddress)), HANDLE_RECEIVE_ROOT_SELECTOR, payload);
 
         emit RootPropagated(latestRoot);
     }
@@ -162,7 +171,7 @@ contract StarkStateBridge is Ownable2Step {
     ///////////////////////////////////////////////////////////////////
 
     /// @notice Sets the gas limit for the propagateRoot method
-    /// @param _opGasLimit The new gas limit for the propagateRoot method
+    /// @param _starkGasLimit The new gas limit for the propagateRoot method
     function setGasLimitPropagateRoot(uint32 _starkGasLimit) external onlyOwner {
         if (_starkGasLimit <= 0) {
             revert GasLimitZero();
@@ -174,7 +183,7 @@ contract StarkStateBridge is Ownable2Step {
     }
 
     /// @notice Sets the gas limit for the SetRootHistoryExpiry method
-    /// @param _opGasLimit The new gas limit for the SetRootHistoryExpiry method
+    /// @param _starkGasLimit The new gas limit for the SetRootHistoryExpiry method
     function setGasLimitSetRootHistoryExpiry(uint32 _starkGasLimit) external onlyOwner {
         if (_starkGasLimit <= 0) {
             revert GasLimitZero();
@@ -197,15 +206,4 @@ contract StarkStateBridge is Ownable2Step {
     //     emit SetGasLimitTransferOwnershipOp(_opGasLimit);
     // }
 
-    ///////////////////////////////////////////////////////////////////
-    ///                          OWNERSHIP                          ///
-    ///////////////////////////////////////////////////////////////////
-    /// @notice Ensures that ownership of WorldID implementations cannot be renounced.
-    /// @dev This function is intentionally not `virtual` as we do not want it to be possible to
-    ///      renounce ownership for any WorldID implementation.
-    /// @dev This function is marked as `onlyOwner` to maintain the access restriction from the base
-    ///      contract.
-    // function renounceOwnership() public view override onlyOwner {
-    //     revert CannotRenounceOwnership();
-    // }
 }
