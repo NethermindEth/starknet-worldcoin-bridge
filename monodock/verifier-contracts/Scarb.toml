@@ -1,2 +1,2 @@
 [workspace]
-members = ["verifier", "bn"]
+members = ["verifier"]

@@ -4,6 +4,7 @@ version = 1
 [[package]]
 name = "bn"
 version = "0.1.0"
+source = "git+https://github.com/shramee/cairo_bn.git?branch=main#aa771c297638098ee38a6bdd4212241a6ef03a84"
 
 [[package]]
 name = "snforge_std"
