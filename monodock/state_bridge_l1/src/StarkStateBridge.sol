@@ -194,5 +194,4 @@ contract StarkStateBridge is Ownable {
 
         emit SetGasLimitTransferOwnership(_starkGasLimit);
     }
-
 }
