@@ -6,7 +6,7 @@ import {IStarkWorldID} from "./interfaces/IStarkWorldID.sol";
 import {IRootHistory} from "./interfaces/IRootHistory.sol";
 import {IWorldIDIdentityManager} from "./interfaces/IWorldIDIdentityManager.sol";
 //import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
-import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
+import {Ownable} from "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./starknet/StarknetMessaging.sol";
 import "./starknet/Constants.sol";
 import "./starknet/IStarknetMessaging.sol";
