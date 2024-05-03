@@ -125,10 +125,7 @@ pub mod WorldID {
             self.latest_root.read()
         }
 
-        /// @notice Sets the amount of time it takes for a root in the root history to expire.
-        /// @dev When implementing this function, ensure that it is guarded on `onlyOwner`.
-        ///
-        /// @param expiryTime The new amount of time it takes for a root to expire.
+        /// @notice Gets the amount of time it takes for a root in the root history to expire.
         fn root_history_expiry(self: @ComponentState<TContractState>) -> u256{
             self.root_history_expiry.read()
         }
