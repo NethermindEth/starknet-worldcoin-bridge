@@ -5,7 +5,6 @@ pragma solidity ^0.8.15;
 import {IStarkWorldID} from "./interfaces/IStarkWorldID.sol";
 import {IRootHistory} from "./interfaces/IRootHistory.sol";
 import {IWorldIDIdentityManager} from "./interfaces/IWorldIDIdentityManager.sol";
-//import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
 import {Ownable} from "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./starknet/StarknetMessaging.sol";
 import "./starknet/Constants.sol";
@@ -21,7 +20,7 @@ contract StarkStateBridge is Ownable {
     ///////////////////////////////////////////////////////////////////
 
     /// @notice The address of the StarkWorldID contract 
-    address public immutable starkWorldIDAddress;
+    uint256  public immutable starkWorldIDAddress;
 
     /// @notice Ethereum mainnet worldID Address
     address public immutable worldIDAddress;
@@ -81,6 +80,23 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Emitted when an attempt is made to set an address to zero
     error AddressZero();
+    
+    // testing
+    function sendMessage(
+        uint256 contractAddress,
+        uint256 selector,
+        uint256[] memory payload
+    )
+        external
+        payable
+    {
+        IStarknetMessaging(snMessaging).sendMessageToL2{value: msg.value}(
+            contractAddress,
+            selector,
+            payload
+        );
+    }
+
 
     ///////////////////////////////////////////////////////////////////
     ///                         CONSTRUCTOR                         ///
@@ -93,11 +109,11 @@ contract StarkStateBridge is Ownable {
     /// @custom:revert if any of the constructor params addresses are zero
     constructor(
         address _worldIDIdentityManager,
-        address _starkWorldIDAddress,
+        uint256 _starkWorldIDAddress,
         address _snMessaging
     )  Ownable(msg.sender) {
         if (
-            _worldIDIdentityManager == address(0) || _starkWorldIDAddress == address(0)
+            _worldIDIdentityManager == address(0) || _starkWorldIDAddress == uint256(0)
         ) {
             revert AddressZero();
         }
@@ -116,12 +132,13 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Sends the latest WorldID Identity Manager root to Starknet
     /// @dev Calls this method on the L1 Proxy contract to relay roots to the destination Starknet
-    function propagateRoot() external {
+    function propagateRoot() external payable {
         uint256 latestRoot = IWorldIDIdentityManager(worldIDAddress).latestRoot();
-        uint256[] memory payload = new uint256[](1);
-        payload[0] = latestRoot; 
+        uint256[] memory payload = new uint256[](2);
+        payload[0] = latestRoot & (UINT256_PART_SIZE - 1);
+        payload[1] = latestRoot >> UINT256_PART_SIZE_BITS; 
 
-        IStarknetMessaging(snMessaging).sendMessageToL2(uint256(uint160(starkWorldIDAddress)), HANDLE_RECEIVE_ROOT_SELECTOR, payload);
+        IStarknetMessaging(snMessaging).sendMessageToL2{value: _gasLimitPropagateRoot}(starkWorldIDAddress, HANDLE_RECEIVE_ROOT_SELECTOR, payload);
 
         emit RootPropagated(latestRoot);
     }
@@ -129,7 +146,7 @@ contract StarkStateBridge is Ownable {
     // @notice Adds functionality to the StateBridge to transfer ownership
     // @param _owner new owner (EOA or contract)
     // @custom:revert if _owner is set to the zero address
-    function transferOwnershipStark(address _owner) external onlyOwner {
+    function transferOwnershipStark(address _owner) external payable onlyOwner {
         if (_owner == address(0)) {
             revert AddressZero();
         }
@@ -137,7 +154,7 @@ contract StarkStateBridge is Ownable {
         uint256[] memory payload = new uint256[](1);
         payload[0] = uint256(uint160(_owner)); 
 
-        IStarknetMessaging(snMessaging).sendMessageToL2(uint256(uint160(starkWorldIDAddress)), HANDLE_TRANSFER_OWNERSHIP_SELECTOR, payload);
+        IStarknetMessaging(snMessaging).sendMessageToL2{value: _gasLimitSetRootHistoryExpiry}(starkWorldIDAddress, HANDLE_TRANSFER_OWNERSHIP_SELECTOR, payload);
 
    
         emit OwnershipTransferredStark(owner(), _owner);
@@ -145,11 +162,11 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Adds functionality to the StateBridge to set the root history expiry on Starknet
     /// @param _rootHistoryExpiry new root history expiry
-    function setRootHistoryExpiry(uint256 _rootHistoryExpiry) external onlyOwner {
+    function setRootHistoryExpiry(uint256 _rootHistoryExpiry) external payable onlyOwner {
         uint256[] memory payload = new uint256[](1);
         payload[0] = _rootHistoryExpiry; 
 
-        IStarknetMessaging(snMessaging).sendMessageToL2(uint256(uint160(starkWorldIDAddress)), HANDLE_SET_ROOT_HISTORY_EXPIRY_SELECTOR, payload);
+        IStarknetMessaging(snMessaging).sendMessageToL2{value: _gasLimitTransferOwnership}(starkWorldIDAddress, HANDLE_SET_ROOT_HISTORY_EXPIRY_SELECTOR, payload);
 
 
         emit SetRootHistoryExpiry(_rootHistoryExpiry);
