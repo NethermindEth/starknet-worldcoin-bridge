@@ -22,10 +22,10 @@ contract StarkStateBridgeScript is Script {
 		uint256[] memory payload = new uint256[](1);
         payload[0] = 123;
 
-		StarkStateBridge(0x8Aed6FE10dF3d6d981B101496C9c7245AE65cAEc).sendMessage{value: 30000}(
-            _l2ContractAddress,
-            _l2Selector,
-            payload);
+		// StarkStateBridge(0x8Aed6FE10dF3d6d981B101496C9c7245AE65cAEc).sendMessage{value: 30000}(
+        //     _l2ContractAddress,
+        //     _l2Selector,
+        //     payload);
 	
 		vm.stopBroadcast();
 	}

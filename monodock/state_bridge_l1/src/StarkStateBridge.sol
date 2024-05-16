@@ -80,23 +80,6 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Emitted when an attempt is made to set an address to zero
     error AddressZero();
-    
-    // testing
-    function sendMessage(
-        uint256 contractAddress,
-        uint256 selector,
-        uint256[] memory payload
-    )
-        external
-        payable
-    {
-        IStarknetMessaging(snMessaging).sendMessageToL2{value: msg.value}(
-            contractAddress,
-            selector,
-            payload
-        );
-    }
-
 
     ///////////////////////////////////////////////////////////////////
     ///                         CONSTRUCTOR                         ///
