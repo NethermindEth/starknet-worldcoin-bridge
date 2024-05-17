@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.8.15;
 
 
@@ -20,13 +20,13 @@ contract StarkStateBridge is Ownable {
     ///////////////////////////////////////////////////////////////////
 
     /// @notice The address of the StarkWorldID contract 
-    uint256  public immutable starkWorldIDAddress;
+    uint256  public starkWorldIDAddress;
 
-    /// @notice Ethereum mainnet worldID Address
-    address public immutable worldIDAddress;
+    /// @notice Ethereum mainnet worldIDIdentityManager Address
+    address public worldIDIdentityManager;
 
     /// @notice Starknet Cross Messaging Address
-    address public immutable snMessaging;
+    address public starknetCoreContract;
 
     /// @notice Amount of gas purchased on Starknet for propagateRoot
     uint32 internal _gasLimitPropagateRoot;
@@ -60,16 +60,29 @@ contract StarkStateBridge is Ownable {
     event SetRootHistoryExpiry(uint256 rootHistoryExpiry);
 
     /// @notice Emitted when the StateBridge sets the gas limit for sendRoot
-    /// @param _GasLimit The new opGasLimit for sendRoot
+    /// @param _GasLimit The new GasLimit for sendRoot
     event SetGasLimitPropagateRoot(uint32 _GasLimit);
 
     /// @notice Emitted when the StateBridge sets the gas limit for SetRootHistoryExpiry
-    /// @param _GasLimit The new opGasLimit for SetRootHistoryExpiry
+    /// @param _GasLimit The new GasLimit for SetRootHistoryExpiry
     event SetGasLimitSetRootHistoryExpiry(uint32 _GasLimit);
 
     /// @notice Emitted when the StateBridge sets the gas limit for transferOwnership
-    /// @param _GasLimit The new opGasLimit for transferOwnershipStark
+    /// @param _GasLimit The new GasLimit for transferOwnershipStark
     event SetGasLimitTransferOwnership(uint32 _GasLimit);
+
+    /// @notice Emitted when the StateBridge changes the worldIDIdentityManager
+    /// @param _worldIDIdentityManager The new address of worldIDIdentityManager
+    event SetWorldIDIdentityManager(address _worldIDIdentityManager);
+    
+    /// @notice Emitted when the StateBridge changes the starkWorldIDAddress
+    /// @param _starkWorldIDAddress The new address of starkWorldIDAddress
+    event SetStarkWorldIDAddress(uint256 _starkWorldIDAddress);
+    
+    /// @notice Emitted when the StateBridge changes the starknetCoreContract
+    /// @param _starknetCoreContract The new address of starknetCoreContract
+    event SetStarknetCoreContract(address _starknetCoreContract);
+    
 
     ///////////////////////////////////////////////////////////////////
     ///                            ERRORS                           ///
@@ -93,7 +106,7 @@ contract StarkStateBridge is Ownable {
     constructor(
         address _worldIDIdentityManager,
         uint256 _starkWorldIDAddress,
-        address _snMessaging
+        address _starknetCoreContract
     )  Ownable(msg.sender) {
         if (
             _worldIDIdentityManager == address(0) || _starkWorldIDAddress == uint256(0)
@@ -102,8 +115,8 @@ contract StarkStateBridge is Ownable {
         }
 
         starkWorldIDAddress = _starkWorldIDAddress;
-        worldIDAddress = _worldIDIdentityManager;
-        snMessaging = _snMessaging; 
+        worldIDIdentityManager = _worldIDIdentityManager;
+        starknetCoreContract = _starknetCoreContract; 
         _gasLimitPropagateRoot = DEFAULT_STARK_GAS_LIMIT;
         _gasLimitSetRootHistoryExpiry = DEFAULT_STARK_GAS_LIMIT;
         _gasLimitTransferOwnership = DEFAULT_STARK_GAS_LIMIT;
@@ -116,12 +129,12 @@ contract StarkStateBridge is Ownable {
     /// @notice Sends the latest WorldID Identity Manager root to Starknet
     /// @dev Calls this method on the L1 Proxy contract to relay roots to the destination Starknet
     function propagateRoot() external payable {
-        uint256 latestRoot = IWorldIDIdentityManager(worldIDAddress).latestRoot();
+        uint256 latestRoot = IWorldIDIdentityManager(worldIDIdentityManager).latestRoot();
         uint256[] memory payload = new uint256[](2);
         payload[0] = latestRoot & (UINT256_PART_SIZE - 1);
         payload[1] = latestRoot >> UINT256_PART_SIZE_BITS; 
 
-        IStarknetMessaging(snMessaging).sendMessageToL2{value: _gasLimitPropagateRoot}(starkWorldIDAddress, HANDLE_RECEIVE_ROOT_SELECTOR, payload);
+        IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: _gasLimitPropagateRoot}(starkWorldIDAddress, HANDLE_RECEIVE_ROOT_SELECTOR, payload);
 
         emit RootPropagated(latestRoot);
     }
@@ -137,8 +150,7 @@ contract StarkStateBridge is Ownable {
         uint256[] memory payload = new uint256[](1);
         payload[0] = uint256(uint160(_owner)); 
 
-        IStarknetMessaging(snMessaging).sendMessageToL2{value: _gasLimitSetRootHistoryExpiry}(starkWorldIDAddress, HANDLE_TRANSFER_OWNERSHIP_SELECTOR, payload);
-
+        IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: _gasLimitSetRootHistoryExpiry}(starkWorldIDAddress, HANDLE_TRANSFER_OWNERSHIP_SELECTOR, payload);
    
         emit OwnershipTransferredStark(owner(), _owner);
     }
@@ -149,8 +161,7 @@ contract StarkStateBridge is Ownable {
         uint256[] memory payload = new uint256[](1);
         payload[0] = _rootHistoryExpiry; 
 
-        IStarknetMessaging(snMessaging).sendMessageToL2{value: _gasLimitTransferOwnership}(starkWorldIDAddress, HANDLE_SET_ROOT_HISTORY_EXPIRY_SELECTOR, payload);
-
+        IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: _gasLimitTransferOwnership}(starkWorldIDAddress, HANDLE_SET_ROOT_HISTORY_EXPIRY_SELECTOR, payload);
 
         emit SetRootHistoryExpiry(_rootHistoryExpiry);
     }
@@ -193,5 +204,39 @@ contract StarkStateBridge is Ownable {
         _gasLimitTransferOwnership = _starkGasLimit;
 
         emit SetGasLimitTransferOwnership(_starkGasLimit);
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    ///                       ADRESS STORAGE                        ///
+    ///////////////////////////////////////////////////////////////////
+
+    function setWorldIDIdentityManager(address _worldIDIdentityManager) external onlyOwner {
+        if (_worldIDIdentityManager == address(0)) {
+            revert AddressZero();
+        }
+
+        worldIDIdentityManager = _worldIDIdentityManager;
+
+        emit SetWorldIDIdentityManager(_worldIDIdentityManager);
+    }
+
+    function setStarkWorldIDAddress(uint256 _starkWorldIDAddress) external onlyOwner {
+        if (_starkWorldIDAddress == 0) {
+            revert AddressZero();
+        }
+
+        starkWorldIDAddress = _starkWorldIDAddress;
+        
+        emit SetStarkWorldIDAddress(_starkWorldIDAddress);(_starkWorldIDAddress);
+    }
+
+    function setStarknetCoreContract(address _starknetCoreContract) external onlyOwner {
+        if (_starknetCoreContract == address(0)) {
+            revert AddressZero();
+        }
+
+        starknetCoreContract = _starknetCoreContract;
+
+        emit SetStarknetCoreContract(_starknetCoreContract);
     }
 }

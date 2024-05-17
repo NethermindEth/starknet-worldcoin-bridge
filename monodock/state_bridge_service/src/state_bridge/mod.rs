@@ -16,7 +16,7 @@ use tracing::instrument;
 
 use self::error::StateBridgeError;
 use crate::abi::{self};
-use crate::tree::Hash;
+//use crate::tree::Hash;
 
 /// The `StateBridge` is responsible for monitoring root changes from the `WorldRoot`, and calling the root propogation
 pub struct StateBridge<L1M: Middleware + 'static>{
@@ -38,7 +38,6 @@ impl<L1M: Middleware> StateBridge<L1M> {
     /// * l1_state_bridge - Address for the state bridge contract on layer 1.
     /// * wallet - Wallet responsible for sending `propagateRoot` transactions.
     /// * l1_middleware - Middleware to interact with layer 1.
-    /// * l2_world_id - Interface to the BridgedWorldID smart contract.
     /// * relaying_period - Duration between successive propagateRoot() invocations.
     /// * block_confirmations - Number of block confirmations required to consider a propagateRoot() transaction as finalized.
     pub fn new(
@@ -52,7 +51,6 @@ impl<L1M: Middleware> StateBridge<L1M> {
             l1_state_bridge,
             wallet,
             l1_middleware,
-            l2_world_id,
             relaying_period,
             block_confirmations,
         })
@@ -69,17 +67,14 @@ impl<L1M: Middleware> StateBridge<L1M> {
         l1_state_bridge: H160,
         wallet: LocalWallet,
         l1_middleware: Arc<L1M>,
-        l2_world_id: H160,
         relaying_period: Duration,
         block_confirmations: usize,
     ) -> Result<Self, StateBridgeError<L1M>> {
-        let l2_world_id = IBridgedWorldID::new(l2_world_id);
 
         Ok(Self {
             l1_state_bridge,
             wallet,
             l1_middleware,
-            l2_world_id,
             relaying_period,
             block_confirmations,
         })
@@ -95,16 +90,13 @@ impl<L1M: Middleware> StateBridge<L1M> {
         &self,
         mut root_rx: tokio::sync::broadcast::Receiver<Hash>,
     ) -> JoinHandle<Result<(), StateBridgeError<L1M>>> {
-        let l2_world_id = self.l2_world_id.clone();
         let l1_state_bridge = self.l1_state_bridge;
         let relaying_period = self.relaying_period;
         let block_confirmations = self.block_confirmations;
         let wallet = self.wallet.clone();
-        let l2_world_id_address = l2_world_id.address();
         let l1_middleware = self.l1_middleware.clone();
 
         tracing::info!(
-            ?l2_world_id_address,
             ?l1_state_bridge,
             ?relaying_period,
             ?block_confirmations,

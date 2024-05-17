@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../lib/forge-std/src/Script.sol";
 import "../src/starknet/StarknetMessaging.sol";
 import "../src/StarkStateBridge.sol";
-import "../src/test/MockWorldIDIdentityManager.sol";
+import "../src/mock/MockWorldIDIdentityManager.sol";
 /**
    Deploys the StarkStateBridge and StarknetMessaging contracts.
 */
@@ -27,11 +27,5 @@ contract LocalSetup is Script {
         vm.serializeString(json, "contractMsg_address", vm.toString(contractMsg));
 
         vm.stopBroadcast();
-
-        // string memory data = vm.serializeBool(json, "success", true);
-        
-        // string memory localLogs = "./logs/";
-        // vm.createDir(localLogs, true);
-        // vm.writeJson(data, string.concat(localLogs, "local_setup.json"));
     }
 }
