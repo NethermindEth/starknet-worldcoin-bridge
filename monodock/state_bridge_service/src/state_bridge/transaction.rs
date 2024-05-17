@@ -4,7 +4,7 @@ use ethers::providers::{JsonRpcClient, Middleware, PendingTransaction};
 use ethers::signers::{LocalWallet, WalletError};
 use ethers::types::transaction::eip2718::TypedTransaction;
 use ethers::types::{
-    Bytes, Eip1559TransactionRequest, TransactionReceipt, H160,
+    BlockId, BlockNumber, Bytes, Eip1559TransactionRequest, TransactionReceipt, H160,
 };
 use tracing::instrument;
 
@@ -47,6 +47,7 @@ pub async fn fill_and_simulate_eip1559_transaction<M: Middleware>(
     from: H160,
     chain_id: u64,
     middleware: Arc<M>,
+    value: u32,
 ) -> Result<TypedTransaction, TransactionError<M>> {
     let (max_fee_per_gas, max_priority_fee_per_gas) = middleware
         .estimate_eip1559_fees(None)
@@ -59,6 +60,11 @@ pub async fn fill_and_simulate_eip1559_transaction<M: Middleware>(
         "Estimated gas fees"
     );
 
+    let nonce = middleware
+        .get_transaction_count(from, Some(BlockId::Number(BlockNumber::Latest)))
+        .await
+        .unwrap();
+
     let mut tx: TypedTransaction = Eip1559TransactionRequest::new()
         .data(calldata.clone())
         .to(to)
@@ -66,6 +72,8 @@ pub async fn fill_and_simulate_eip1559_transaction<M: Middleware>(
         .chain_id(chain_id)
         .max_priority_fee_per_gas(max_priority_fee_per_gas)
         .max_fee_per_gas(max_fee_per_gas)
+        .value(value)
+        .nonce(nonce)
         .into();
 
     middleware
@@ -102,9 +110,7 @@ pub async fn wait_for_tx_receipt<'a, M: Middleware, P: JsonRpcClient>(
         "Waiting for block confirmations"
     );
 
-    if let Some(tx_receipt) =
-        pending_tx.await.map_err(TransactionError::ProviderError)?
-    {
+    if let Some(tx_receipt) = pending_tx.await.map_err(TransactionError::ProviderError)? {
         tracing::info!(?tx_receipt, "Tx receipt received");
 
         return Ok(tx_receipt);

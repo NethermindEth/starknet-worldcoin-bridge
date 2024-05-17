@@ -16,6 +16,4 @@ abigen!(
     ]"#;
 
 
-    event_derives(serde::Deserialize, serde::Serialize)
-
 );
