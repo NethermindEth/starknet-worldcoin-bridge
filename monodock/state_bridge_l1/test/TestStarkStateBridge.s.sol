@@ -11,42 +11,56 @@ contract TestStarkStateBridge is Script {
     uint256 starkWorldIDAddress = vm.envUint("STARK_WORLD_ID_ADDRESS");
     StarkStateBridge starkStateBridge = StarkStateBridge(vm.envAddress("STARK_STATE_BRIDGE"));
     MockWorldIDIdentityManager mockWorldIDIdentityManager = MockWorldIDIdentityManager(vm.envAddress("WORLD_ID_IDENTITY_MANAGER"));
-
+    uint256 immutable DEFAULT_GAS = 1000000;
     function run() public{
         vm.startBroadcast(deployerPrivateKey);
 
-        RootExpiry(); 
+        runRootExpiryTest(); 
+        runTransferOwner(); 
 
         vm.stopBroadcast();
     }
 
     function runRootPropogation() public {
-        starkStateBridge.propagateRoot{value: 1000000}();
+        starkStateBridge.propagateRoot{value: DEFAULT_GAS}();
         mockWorldIDIdentityManager.incrementRoot(); // mock function to simulate new root
     }
 
-    function RootExpiry() public {
+    function runRootExpiryTest() public {
         // Setup
         runRootPropogation();
+        runRootPropogation();   
+
+        // Trigger error 
+        starkStateBridge.propagateRoot{value: DEFAULT_GAS}(); // Error CANNOT_OVERWRITE_ROOT
+        mockWorldIDIdentityManager.incrementRoot();
+
+        // Set Invalid Root History Expiry
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(0);
         runRootPropogation();
-        starkStateBridge.propagateRoot{value: 1000000}(); // Error CANNOT_OVERWRITE_ROOT
-        
 
+        // Set Valid Root History Expiry
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(10000000);
+        runRootPropogation();
 
+        // Set Valid Root History Expiry But Expired
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(5);
+        runRootPropogation();
+
+        // Set Valid Root History Expiry, Expired But Valid (latest root always valid)
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(5);
+        runRootPropogation();
+    }
+
+    function runTransferOwner() public {
+        // Invalid Owner
+        //starkStateBridge.transferOwnership(address(0));
+
+        // Valid Owner - bricks local bridge
+        starkStateBridge.transferOwnership(address(1000));
     }
 }
         
         
         
-        //assert!(old_root_call.is_ok()); 
-        //let new_root_call = world_id.require_valid_root(new_root);
-        //assert!(new_root_call.is_ok()); 
-
-        // Root is Expired
-        //start_warp(CheatTarget::One(contract_address), expiry + initial_block + 1); // set block timestamp = 100
-        //let old_root_call = StarkWorldID::require_valid_root(old_root);
-        //assert!(old_root_call.is_err()); 
-
-        // Root is Valid (latest root is always valid)
-        //let new_root_call = StarkWorldID::require_valid_root(new_root);
-        //assert!(new_root_call.is_ok()); 
+    

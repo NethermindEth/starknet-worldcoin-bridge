@@ -42,7 +42,6 @@ mod test {
         let mut stark_world_id_state = StarkWorldID::contract_state_for_testing(); 
         let owner: EthAddress = 111.try_into().unwrap(); 
 
-
         // Create temp state
         StarkWorldID::constructor(ref stark_world_id_state, owner, 30);
 
@@ -66,4 +65,7 @@ mod test {
         let root: u256 = 0x012cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
         StarkWorldID::receive_root(ref stark_world_id_state, invalid_caller.into(), root);
     }
+
+    
 }
+
