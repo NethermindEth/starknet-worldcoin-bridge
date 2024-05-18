@@ -1,4 +1,4 @@
-mod stark_world_id;
+pub mod stark_world_id;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
