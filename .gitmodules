@@ -1,0 +1,3 @@
+[submodule "monodock/state_bridge_l1/lib/openzeppelin-contracts"]
+	path = monodock/state_bridge_l1/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
