@@ -1,4 +1,3 @@
-@@ -0,0 +1,76 @@
 /*
   Copyright 2019-2022 StarkWare Industries Ltd.
   Licensed under the Apache License, Version 2.0 (the "License").

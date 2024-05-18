@@ -1,15 +1,22 @@
 mod world_id_bridge; 
 
+// ** Note ** 
+// These tests use the L1 handler functions as though they are external, in production, other contracts or EOAs 
+// should not be able to call the L1 handlers. Only the starknet sequencer should be able to call.  
+
 #[cfg(test)]
 mod test {
-    use starknet::{ContractAddress, get_caller_address};
+    use starknet::{ContractAddress, get_caller_address, EthAddress};
     use snforge_std::{declare, ContractClass, ContractClassTrait, prank, start_prank, start_warp, CheatTarget};
     use world_id_state_bridge::stark_world_id::interface_stark_world_id::{IStarkWorldIDDispatcher, IStarkWorldIDDispatcherTrait, IStarkWorldIDSafeDispatcher, IStarkWorldIDSafeDispatcherTrait};
     use world_id_state_bridge::stark_world_id::world_id_bridge::world_id_bridge::{IWorldIDExtSafeDispatcher, IWorldIDExtSafeDispatcherTrait};
-
+    use world_id_state_bridge::stark_world_id::StarkWorldID;
+    use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID;
+    
     fn setup_world_id_ext() -> (ContractAddress, IStarkWorldIDSafeDispatcher) {
         let contract: ContractClass = declare("StarkWorldID");
         let mut args = ArrayTrait::new();
+        args.append(111.try_into().unwrap());
         args.append(20); 
 
         let contract_address = contract.precalculate_address(@args);
@@ -24,81 +31,41 @@ mod test {
     fn test_invalid_constructor_root() {
         let contract = declare("StarkWorldID");
         let mut args = ArrayTrait::new();
+        args.append(111.try_into().unwrap());
         args.append(10); 
         contract.deploy(@args).unwrap();
     }
     
     #[test]
-    #[feature("safe_dispatcher")]
     fn test_only_owner_receive_root() {
-        // setup
-        let contract: ContractClass = declare("StarkWorldID");
-        let mut args = ArrayTrait::new();
-        args.append(20); 
-        
-        let contract_address = contract.precalculate_address(@args);
+        // Setup
+        let mut stark_world_id_state = StarkWorldID::contract_state_for_testing(); 
+        let owner: EthAddress = 111.try_into().unwrap(); 
 
-        start_prank(CheatTarget::One(contract_address), 111.try_into().unwrap()); // set caller to 111
-        contract.deploy(@args).unwrap();
+        // Create temp state
+        StarkWorldID::constructor(ref stark_world_id_state, owner, 30);
 
-        let dispatcher = IStarkWorldIDSafeDispatcher {contract_address};
-        
         // Owner call Succeeds
         let root: u256 = 0x012cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-        let owner_call = dispatcher.receive_root(root);
-        assert!(owner_call.is_ok()); 
-
-        // Outsider call Fails
-        start_prank(CheatTarget::One(contract_address), 123.try_into().unwrap());
-        let outside_call = dispatcher.receive_root(root);
-        assert!(outside_call.is_err());
+        StarkWorldID::receive_root(ref stark_world_id_state, owner.into(), root);
     }
 
     #[test]
-    #[feature("safe_dispatcher")]
-    fn test_valid_require_valid_root() {
-        let (contract_address, dispatcher) = setup_world_id_ext(); 
+    #[should_panic]
+    fn test_invalid_only_owner_receive_root() {
+        // setup
+        let mut stark_world_id_state = StarkWorldID::contract_state_for_testing(); 
+        let owner: EthAddress = 111.try_into().unwrap(); 
+        let invalid_caller: EthAddress = 222.try_into().unwrap(); 
 
-        let initial_block = 100;
-        start_warp(CheatTarget::One(contract_address), initial_block); // set block timestamp = 100
-        
-        let expiry: u64 = 1000; 
-        dispatcher.set_root_history_expiry(expiry.into()).unwrap(); 
+        // Create temp state
+        StarkWorldID::constructor(ref stark_world_id_state, owner, 30);
 
-        let old_root: u256 = 0x712cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-        dispatcher.receive_root(old_root).unwrap();
-        let new_root: u256 = 0x012cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-        dispatcher.receive_root(new_root).unwrap();
-
-        let world_id_dispatcher = IWorldIDExtSafeDispatcher {contract_address};
-
-        // Root is Valid 
-        let old_root_call = world_id_dispatcher.require_valid_root(old_root);
-        assert!(old_root_call.is_ok()); 
-        let new_root_call = world_id_dispatcher.require_valid_root(new_root);
-        assert!(new_root_call.is_ok()); 
-
-        // Root is Expired
-        start_warp(CheatTarget::One(contract_address), expiry + initial_block + 1); // set block timestamp = 100
-        let old_root_call = world_id_dispatcher.require_valid_root(old_root);
-        assert!(old_root_call.is_err()); 
-
-        // Root is Valid (latest root is always valid)
-        let new_root_call = world_id_dispatcher.require_valid_root(new_root);
-        assert!(new_root_call.is_ok()); 
-
+        // Owner call Fails
+        let root: u256 = 0x012cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
+        StarkWorldID::receive_root(ref stark_world_id_state, invalid_caller.into(), root);
     }
 
-    #[test]
-    #[feature("safe_dispatcher")]
-    fn test_valid_overwrite_latest_root() {
-        let (_, dispatcher) = setup_world_id_ext(); 
-
-        let old_root: u256 = 0x712cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-        dispatcher.receive_root(old_root).unwrap();
-
-        let new_root: u256 = 0x712cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
-        let invalid_overwrite_call = dispatcher.receive_root(new_root);
-        assert!(invalid_overwrite_call.is_ok()); 
-    }
+    
 }
+

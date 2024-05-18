@@ -20,6 +20,17 @@ services:
     networks:
       - worldcoin
 
+  katana:
+    build:
+      context: .  # Set the Docker context to the current directory
+      dockerfile: Dockerfile.katana # Specify the custom Dockerfile name
+    ports:
+      - "5050:5050"
+    depends_on:
+      - anvil
+    networks:
+      - worldcoin
+
   jaeger: # observability
     image: jaegertracing/all-in-one:latest
     environment:

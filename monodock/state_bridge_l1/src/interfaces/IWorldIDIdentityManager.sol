@@ -1,16 +1,10 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.8.15;
 
-/// @title Interface for WorldID setRooHistoryExpiry
+/// @title IWorldIDIdentityManager
 /// @author Worldcoin
-/// @notice Interface for WorldID setRooHistoryExpiry
-/// @dev Used in StateBridge to set the root history expiry time on Optimism (OPWorldID)
-/// @custom:usage abi.encodeCall(IRootHistory.setRootHistoryExpiry, (_expiryTime));
-interface IRootHistory {
-    /// @notice Sets the amount of time it takes for a root in the root history to expire.
-    ///
-    /// @param expiryTime The new amount of time it takes for a root to expire.
-    ///
-    /// @custom:reverts string If the caller is not the owner.
-    function setRootHistoryExpiry(uint256 expiryTime) external;
+/// @dev used to fetch the latest root from the WorldIDIdentityManager
+interface IWorldIDIdentityManager {
+    /// @notice returns the latest root
+    function latestRoot() external view returns (uint256);
 }
