@@ -7,7 +7,7 @@ pub trait IWorldIDExt<TContractState> {
 
     fn latest_root(self: @TContractState) -> u256;
 
-    fn root_history_expiry(self: @TContractState) -> u256;
+    fn root_history_expiry(self: @TContractState) -> felt252;
 
     fn get_tree_depth(self: @TContractState) -> u8;
 }
@@ -26,10 +26,11 @@ pub mod WorldID {
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     const NULL_ROOT_TIME: u8 = 0;
+    
     #[storage]
     struct Storage {
         tree_depth: u8, // immutable
-        root_history_expiry: u256,
+        root_history_expiry: felt252,
         latest_root: u256,
         root_history: LegacyMap::<u256, u128>,
         //semaphoreVerifier: Semaphore,
@@ -84,7 +85,7 @@ pub mod WorldID {
     #[derive(Drop, starknet::Event)]
     struct RootHistoryExpirySet {
         #[key]
-        new_expiry: u256,
+        new_expiry: felt252,
     }
 
     // External Functions
@@ -108,7 +109,8 @@ pub mod WorldID {
 
             assert(root_timestamp != 0, Errors::NON_EXISTENT_ROOT);
 
-            assert((get_block_timestamp().into() - root_timestamp).into() <= self.root_history_expiry.read(), Errors::EXPIRED_ROOT); 
+            // Check for underflow?
+            assert((get_block_timestamp().into() - root_timestamp).into() <= self.root_history_expiry.read().into(), Errors::EXPIRED_ROOT); 
         }
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -124,11 +126,8 @@ pub mod WorldID {
             self.latest_root.read()
         }
 
-        /// @notice Sets the amount of time it takes for a root in the root history to expire.
-        /// @dev When implementing this function, ensure that it is guarded on `onlyOwner`.
-        ///
-        /// @param expiryTime The new amount of time it takes for a root to expire.
-        fn root_history_expiry(self: @ComponentState<TContractState>) -> u256{
+        /// @notice Gets the amount of time it takes for a root in the root history to expire.
+        fn root_history_expiry(self: @ComponentState<TContractState>) -> felt252{
             self.root_history_expiry.read()
         }
 
@@ -213,7 +212,7 @@ pub mod WorldID {
         /// @dev Intended to be called from a privilege-checked implementation of `receiveRoot`.
         ///
         /// @param expiryTime The new amount of time it takes for a root to expire.
-        fn _set_root_history_expiry(ref self: ComponentState<TContractState>, expiry_time: u256) {
+        fn _set_root_history_expiry(ref self: ComponentState<TContractState>, expiry_time: felt252) {
             self.root_history_expiry.write(expiry_time); 
 
             self.emit(RootHistoryExpirySet {new_expiry: expiry_time});

@@ -16,6 +16,12 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+<<<<<<< HEAD
 [submodule "monodock/state_bridge_l1/lib/openzeppelin-contracts"]
 	path = monodock/state_bridge_l1/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
+=======
+[submodule "monodock/state_bridge_service/evm-indexer"]
+	path = monodock/state_bridge_service/evm-indexer
+	url = https://github.com/llamafolio/evm-indexer.git
+>>>>>>> fb83e7ee1e3430129911d957d5e95e554d4ab100
