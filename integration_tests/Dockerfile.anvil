@@ -1,0 +1,11 @@
+# Use the latest foundry image
+FROM ghcr.io/foundry-rs/foundry
+
+# Set the working directory inside the container
+WORKDIR /Anvil
+
+# Copy our source code into the container
+COPY . .
+
+# Use array syntax for ENTRYPOINT
+ENTRYPOINT ["anvil", "--host", "0.0.0.0", "--chain-id", "31337"]
