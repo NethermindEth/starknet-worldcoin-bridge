@@ -1,3 +1,6 @@
+[submodule "monodock/state_bridge_l1/lib/openzeppelin-contracts"]
+	path = monodock/state_bridge_l1/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
 [submodule "monodock/rust-tracing-otlp"]
 	path = monodock/rust-tracing-otlp
 	url = https://github.com/tekul/rust-tracing-otlp.git
