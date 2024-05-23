@@ -1,0 +1,17 @@
+[package]
+name = "verifier"
+version = "0.1.0"
+cairo-version = "2.6.3"
+# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
+
+[dependencies]
+bn = { git = "https://github.com/shramee/cairo_bn.git", branch = "main" }                 # bn = { path = ".." }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.22.0" }
+starknet = "2.6.3"
+
+[[target.starknet-contract]]
+casm = true
+
+[tool.snforge]
+fuzzer_runs = 200
+fuzzer_seed = 1111
