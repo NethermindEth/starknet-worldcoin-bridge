@@ -1,14 +1,6 @@
 version: "3.8"
 
 services:
-  sleep-10:
-    image: alpine
-    command: /bin/sh -c "sleep 10 && exit 0"
-    healthcheck:
-      test: ["CMD-SHELL", "exit 0"]
-      interval: 10s
-      timeout: 5s
-      retries: 1
   anvil:
     build:
       context: .  # Set the Docker context to the current directory
@@ -31,69 +23,6 @@ services:
     networks:
       - worldcoin
 
-  jaeger: # observability
-    image: jaegertracing/all-in-one:latest
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    ports:
-      - 16686:16686 # UI
-      - 4317:4317 # OTLP collector gRPC
-      - 4318:4318 # OTLP collector HTTP/protobuf
-    networks:
-      - worldcoin
-
-  tx-sitter-db:
-    image: postgres:latest
-    ports:
-      - "5431:5432"
-    environment:
-      POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_DB: database
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    volumes:
-      - tx-sitter-db-data:/var/lib/postgresql/data
-    networks:
-      - worldcoin
-
-  signup-sequencer-db:
-    image: postgres:latest
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: database
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    volumes:
-      - signup-sequencer-db-data:/var/lib/postgresql/data
-    networks:
-      - worldcoin
-
-  rust-tx-sitter:
-    build:
-      context: .  # Set the Docker context to the current directory
-      dockerfile: Dockerfile.tx-sitter  # Specify the custom Dockerfile name
-    depends_on:
-      anvil:
-        condition: service_started
-      tx-sitter-db:
-        condition: service_started
-      sleep-10:
-        condition: service_completed_successfully
-    ports:
-      - "3000:3000"
-    environment: # do I have to setup these again?
-      OTEL_SERVICE_NAME: tx-sitter
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      RUST_LOG: "debug,h2=warn"
-    networks:
-      - worldcoin
-
 networks:
   worldcoin:
     driver: bridge
-
-volumes:
-  tx-sitter-db-data:
-  signup-sequencer-db-data:
