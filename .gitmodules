@@ -16,3 +16,6 @@
 [submodule "integration_tests/solidity/lib/forge-std"]
 	path = integration_tests/solidity/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std.git
+[submodule "monodock/state_bridge_l1/lib/forge-std"]
+	path = monodock/state_bridge_l1/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std.git
