@@ -1,0 +1,76 @@
+name: Docker Deployment
+
+# Trigger the workflow on push events specifically for the 'feat/l1-l2-messaging' branch
+on:
+  push:
+    branches:
+      - feat/state_bridge_ci
+
+jobs:
+  build:
+    # Set the job name and specify it runs on the latest Ubuntu virtual environment
+    name: Building CI pipeline on Ubuntu OS
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step to check out the code from the Git repository so that it can be used in subsequent steps
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step to update any Git submodules recursively, ensuring that any dependent repositories are also up to date
+      - name: Update submodules
+        run: git submodule update --init --recursive
+
+      # Step to check if Docker is installed, and if not, install Docker and Docker Compose
+      - name: Check if Docker is installed
+        run: |
+          if ! command -v docker &> /dev/null
+          then
+              sudo apt-get update
+              sudo apt-get install -y docker.io
+              sudo apt-get install -y docker-compose
+          fi
+
+      # Step to install Foundry, a smart contract development toolchain, using a pre-made GitHub Action
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install scarb 2.6.4
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.6.4
+
+      - name: Install Starknet Foundry
+        run: |
+          curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
+          snfoundryup
+
+      # Step to set up and start Docker Compose, building and running the defined services in 'docker-compose.yml'
+      - name: Set up Docker Compose
+        run: |
+          cd ./integration_tests
+          docker-compose up -d --build
+        working-directory: ${{ github.workspace }}
+
+      # Step to deploy smart contracts on specified blockchains or layers and monitor their logs
+      - name: Deploy L2 contracts on both the chains
+        run: bash setup.sh
+        working-directory: ./monodock/state_bridge_l2
+
+      # Step to deploy smart contracts on specified blockchains or layers and monitor their logs
+      - name: Deploy L1 contracts on both the chains
+        run: |
+          cp anvil.env .env
+          source .env
+          forge script script/SetupContracts.s.sol:LocalSetup --broadcast --rpc-url ${ETH_RPC_URL}
+        working-directory: ./monodock/state_bridge_l1
+
+        # Setting up the Relay
+      - name: Setting up the Relay
+        run: |
+          cargo test
+        working-directory: ./monodock/state_bridge_service
+
+      # Step to execute a shell script that tests message passing between Layer 1 and Layer 2 and prints the results
+      - name: Check l1-l2 message passing and print results
+        run: bash ./integration_tests/scripts/test_messaging.sh
+        shell: bash
