@@ -4,7 +4,7 @@ name: Docker Deployment
 on:
   push:
     branches:
-      - feat/state_bridge_ci
+      - feat/ci_state_bridge
 
 jobs:
   build:
