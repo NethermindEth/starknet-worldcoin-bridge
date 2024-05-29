@@ -21,4 +21,4 @@
 	url = https://github.com/foundry-rs/forge-std.git
 [submodule "monodock/state_bridge_service/evm-indexer"]
     path = monodock/state_bridge_service/evm-indexer
-    url = https://github.com/llamafolio/evm-indexer/tree/main
+    url = https://github.com/llamafolio/evm-indexer
