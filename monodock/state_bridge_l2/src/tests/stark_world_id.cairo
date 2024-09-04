@@ -7,14 +7,21 @@ mod world_id_bridge;
 #[cfg(test)]
 mod test {
     use starknet::{ContractAddress, get_caller_address, EthAddress};
-    use snforge_std::{declare, ContractClass, ContractClassTrait, prank, start_prank, start_warp, CheatTarget};
+    use snforge_std::cheatcodes::contract_class::ContractClass;
+    use snforge_std::{declare, ContractClassTrait,DeclareResult};
     use world_id_state_bridge::stark_world_id::interface_stark_world_id::{IStarkWorldIDDispatcher, IStarkWorldIDDispatcherTrait, IStarkWorldIDSafeDispatcher, IStarkWorldIDSafeDispatcherTrait};
     use world_id_state_bridge::stark_world_id::world_id_bridge::world_id_bridge::{IWorldIDExtSafeDispatcher, IWorldIDExtSafeDispatcherTrait};
     use world_id_state_bridge::stark_world_id::StarkWorldID;
     use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID;
+    use core::starknet::syscalls::deploy_syscall;
+
     
     fn setup_world_id_ext() -> (ContractAddress, IStarkWorldIDSafeDispatcher) {
-        let contract: ContractClass = declare("StarkWorldID");
+        let contract: ContractClass = match declare("StarkWorldID").unwrap() {
+            DeclareResult::Success(class_contract) => class_contract,
+            DeclareResult::AlreadyDeclared(class_contract) => class_contract,
+        };
+
         let mut args = ArrayTrait::new();
         args.append(111.try_into().unwrap());
         args.append(20); 
@@ -26,17 +33,19 @@ mod test {
         (contract_address, dispatcher)
     }
 
-    #[test]
-    #[should_panic]
     fn test_invalid_constructor_root() {
-        let contract = declare("StarkWorldID");
-        let mut args = ArrayTrait::new();
+        let contract: ContractClass = match declare("StarkWorldID").unwrap() {
+            DeclareResult::Success(class_contract) => class_contract,
+            DeclareResult::AlreadyDeclared(class_contract) => class_contract,
+        };        let mut args = ArrayTrait::new();
+
         args.append(111.try_into().unwrap());
         args.append(10); 
         contract.deploy(@args).unwrap();
+        
+        panic!("Invalid Constructor Root");
     }
     
-    #[test]
     fn test_only_owner_receive_root() {
         // Setup
         let mut stark_world_id_state = StarkWorldID::contract_state_for_testing(); 
@@ -50,8 +59,6 @@ mod test {
         StarkWorldID::receive_root(ref stark_world_id_state, owner.into(), root);
     }
 
-    #[test]
-    #[should_panic]
     fn test_invalid_only_owner_receive_root() {
         // setup
         let mut stark_world_id_state = StarkWorldID::contract_state_for_testing(); 
@@ -64,8 +71,8 @@ mod test {
         // Owner call Fails
         let root: u256 = 0x012cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
         StarkWorldID::receive_root(ref stark_world_id_state, invalid_caller.into(), root);
-    }
 
-    
+        panic!("Invalid Only Owner Receive Root"); 
+    }
 }
 

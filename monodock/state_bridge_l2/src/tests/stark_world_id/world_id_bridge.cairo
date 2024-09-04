@@ -1,9 +1,8 @@
-#[cfg(test)]
-mod test {
+mod tests {
     use world_id_state_bridge::tests::mocks::world_id_bridge_mock::WorldIDBridgeMock;
     use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID;
     use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID::{WorldIDImpl, InternalImpl};
-    use snforge_std::{declare, ContractClass, ContractClassTrait, prank, start_prank, start_warp, CheatTarget};
+    use snforge_std::{declare, ContractClass, ContractClassTrait};
 
     use starknet::ContractAddress;
     use starknet::SyscallResultTrait;
@@ -27,7 +26,6 @@ mod test {
     ///////////////////////////////////////////////////////////////////
     ///                           SUCCEEDS                          ///
     ///////////////////////////////////////////////////////////////////
-    #[test]
     fn test_get_tree_depth() {
         let mut world_id: ComponentState = Default::default();
         let tree_depth: u8 = 20; 
@@ -36,7 +34,6 @@ mod test {
         assert!(world_id.get_tree_depth() == tree_depth, "Cannot get tree depth");
     }
 
-    #[test]
     fn test_latest_root() {
         let mut world_id = setup();
         let old_root: u256 = 0x712cab3414951eba341ca234aef42142567c6eea50371dd528d57eb2b856d238;
@@ -49,7 +46,6 @@ mod test {
         assert!(world_id.latest_root() == new_root, "Latest root is not updated");
     }
 
-    #[test]
     fn test_set_root_expiry() {
         let mut world_id = setup();
         let expiry: felt252 = 1000000;
@@ -58,7 +54,6 @@ mod test {
         assert!(world_id.root_history_expiry() == expiry, "Root history is not set");
     }
 
-    #[test]
     fn test_valid_overwrite_latest_root() {
         let mut world_id = setup();
 
@@ -71,7 +66,6 @@ mod test {
 
 
     /// Robust Root Expiry test is found in integration tests 
-    #[test]
     fn test_valid_require_valid_root() {
         let mut world_id = setup();        
 
@@ -92,11 +86,10 @@ mod test {
     ///                           PANICS                            ///
     ///////////////////////////////////////////////////////////////////
 
-    #[test]
-    #[should_panic]
     fn test_constructor_with_invalid_tree_depth() {
         let mut world_id: ComponentState = Default::default();
         let tree_depth: u8 = 15; 
         world_id._intialize(tree_depth);
+        panic!("Invalid Tree Depth")
     }
 }

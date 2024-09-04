@@ -13,7 +13,7 @@ pub trait IWorldIDExt<TContractState> {
 }
 
 /// @title Bridged World ID
-/// @author Worldcoin - Ported by Nethermind
+/// @author Worldcoin - Nethermind
 /// @notice A base contract for the WorldID state bridges that exist on other chains. The state
 ///         bridges manage the root history of the identity merkle tree on chains other than
 ///         mainnet.
@@ -21,11 +21,13 @@ pub trait IWorldIDExt<TContractState> {
 ///      code reuse.
 /// @dev This contract is very explicitly not able to be instantiated. Do not turn into contract. 
 #[starknet::component]
+#[feature("deprecated_legacy_map")]
 pub mod WorldID {
     use starknet::get_block_timestamp;
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     const NULL_ROOT_TIME: u8 = 0;
+    use core::starknet::storage::Map;
     
     #[storage]
     struct Storage {
