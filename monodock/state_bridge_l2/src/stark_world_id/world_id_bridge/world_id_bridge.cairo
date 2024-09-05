@@ -180,7 +180,8 @@ pub mod WorldID {
         /// @param _treeDepth The depth of the identities merkle tree.
         fn _intialize(ref self: ComponentState<TContractState>, tree_depth: u8) {
             // initialize ROOT_HISTORY_EXPIRY
-            self.root_history_expiry.write(604800);  // 1 week in seconds
+            let one_week: felt252 = 604800;
+            self.root_history_expiry.write(one_week); 
             assert(validate(tree_depth), Errors::UNSUPPORTED_TREE_DEPTH); 
             self.tree_depth.write(tree_depth);
         }
