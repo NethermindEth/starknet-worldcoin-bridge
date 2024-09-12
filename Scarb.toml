@@ -1,5 +1,0 @@
-[workspace]
-members = [
-    "verifier",
-    "state_bridge_l2",
-]

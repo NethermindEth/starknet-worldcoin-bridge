@@ -2,11 +2,6 @@
 version = 1
 
 [[package]]
-name = "bn"
-version = "0.1.0"
-source = "git+https://github.com/shramee/cairo_bn.git?branch=main#aa771c297638098ee38a6bdd4212241a6ef03a84"
-
-[[package]]
 name = "garaga"
 version = "0.1.0"
 source = "git+https://github.com/keep-starknet-strange/garaga.git?tag=v0.13.2.3#3781978612fdc2f9cb389070751f1abdae8e99a0"
@@ -22,14 +17,6 @@ version = "0.30.0"
 source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.30.0#196f06b251926697c3d66800f2a93ae595e76496"
 dependencies = [
  "snforge_scarb_plugin",
-]
-
-[[package]]
-name = "verifier"
-version = "0.1.0"
-dependencies = [
- "bn",
- "snforge_std",
 ]
 
 [[package]]
