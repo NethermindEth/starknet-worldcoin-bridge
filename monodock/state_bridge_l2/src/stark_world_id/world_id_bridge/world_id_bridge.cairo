@@ -4,16 +4,13 @@
 #[starknet::interface]
 pub trait IWorldIDExt<TContractState> {
     fn require_valid_root(self: @TContractState, root: u256);
-
     fn latest_root(self: @TContractState) -> u256;
-
     fn root_history_expiry(self: @TContractState) -> felt252;
-
     fn get_tree_depth(self: @TContractState) -> u8;
 }
 
 /// @title Bridged World ID
-/// @author Worldcoin - Ported by Nethermind
+/// @author Worldcoin - Nethermind
 /// @notice A base contract for the WorldID state bridges that exist on other chains. The state
 ///         bridges manage the root history of the identity merkle tree on chains other than
 ///         mainnet.
@@ -23,16 +20,18 @@ pub trait IWorldIDExt<TContractState> {
 #[starknet::component]
 pub mod WorldID {
     use starknet::get_block_timestamp;
+    use starknet::storage::Map;
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     const NULL_ROOT_TIME: u8 = 0;
+    use garaga::groth16::verify_groth16_bn254; 
     
     #[storage]
     struct Storage {
         tree_depth: u8, // immutable
         root_history_expiry: felt252,
         latest_root: u256,
-        root_history: LegacyMap::<u256, u128>,
+        root_history: Map::<u256, u128>,
         //semaphoreVerifier: Semaphore,
 
     }
@@ -140,7 +139,6 @@ pub mod WorldID {
     #[embeddable_as(WorldIDImplVerify)]
     impl WorldIDVerify<TContractState, +HasComponent<TContractState>> of interface_world_id::IWorldID<ComponentState<TContractState>> {
 
-        // TODO: 
         ///////////////////////////////////////////////////////////////////////////////
         ///                             SEMAPHORE PROOFS                            ///
         ///////////////////////////////////////////////////////////////////////////////
@@ -157,11 +155,11 @@ pub mod WorldID {
         ///
         /// @custom:reverts string If the zero-knowledge proof cannot be verified for the public inputs.
         fn verify_proof(self: @ComponentState<TContractState>, 
-        root: u256,
-        signalHash: u256,
-        nullifierHash: u256,
-        externalNullifierHash: u256,
-        proof: Array<u256>) {
+            root: u256,
+            signalHash: u256,
+            nullifierHash: u256,
+            externalNullifierHash: u256,
+            proof: Array<u256>) {
     
         }   
     }
@@ -178,7 +176,8 @@ pub mod WorldID {
         /// @param _treeDepth The depth of the identities merkle tree.
         fn _intialize(ref self: ComponentState<TContractState>, tree_depth: u8) {
             // initialize ROOT_HISTORY_EXPIRY
-            self.root_history_expiry.write(604800);  // 1 week in seconds
+            let one_week: felt252 = 604800;
+            self.root_history_expiry.write(one_week); 
             assert(validate(tree_depth), Errors::UNSUPPORTED_TREE_DEPTH); 
             self.tree_depth.write(tree_depth);
         }

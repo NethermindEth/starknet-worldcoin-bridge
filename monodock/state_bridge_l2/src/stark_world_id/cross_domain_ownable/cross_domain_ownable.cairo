@@ -1,8 +1,8 @@
 #[starknet::component]
 pub mod CrossDomainOwnable {
     use world_id_state_bridge::stark_world_id::cross_domain_ownable::interface_cross_domain_ownable;
-    use starknet::{ContractAddress, EthAddress, get_caller_address};
-    const zero: felt252 = 0;
+    use starknet::EthAddress;
+    const ZERO: felt252 = 0;
 
     #[storage]
     struct Storage{
@@ -48,7 +48,7 @@ pub mod CrossDomainOwnable {
 
     pub impl CrossDomainOwnableImpl<TContractState, +HasComponent<TContractState>> of interface_cross_domain_ownable::ICrossDomainOwnable<ComponentState<TContractState>> {
         fn transfer_ownership(ref self: ComponentState<TContractState>, from_address: felt252, new_owner: EthAddress){
-            assert(new_owner.into() != zero, Errors::ZERO_ADDRESS_OWNER);
+            assert(new_owner.into() != ZERO, Errors::ZERO_ADDRESS_OWNER);
             self.only_cross_domain_owner(from_address); 
             
             self.emit(NewL1Owner {previous_l1_owner: self.l1_owner.read(), new_l1_owner: new_owner});
@@ -60,7 +60,7 @@ pub mod CrossDomainOwnable {
         }
 
         fn only_cross_domain_owner(self: @ComponentState<TContractState>, from_address: felt252) {
-            assert(from_address != zero, Errors::ZERO_ADDRESS_CALLER);
+            assert(from_address != ZERO, Errors::ZERO_ADDRESS_CALLER);
             assert(from_address == self.l1_owner.read().into(), Errors::NOT_OWNER);
         }
     }

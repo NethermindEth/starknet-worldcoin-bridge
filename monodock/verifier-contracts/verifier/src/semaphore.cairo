@@ -49,6 +49,7 @@ mod Verifier {
         }
     }
 
+
     #[generate_trait]
     impl Private of PrivateTrait {
         /// Performs the EC pairings verification.

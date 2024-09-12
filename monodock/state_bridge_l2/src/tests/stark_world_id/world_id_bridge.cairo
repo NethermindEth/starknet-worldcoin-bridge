@@ -1,9 +1,9 @@
 #[cfg(test)]
-mod test {
+mod tests {
     use world_id_state_bridge::tests::mocks::world_id_bridge_mock::WorldIDBridgeMock;
     use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID;
     use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID::{WorldIDImpl, InternalImpl};
-    use snforge_std::{declare, ContractClass, ContractClassTrait, prank, start_prank, start_warp, CheatTarget};
+    use snforge_std::{declare, ContractClass, ContractClassTrait};
 
     use starknet::ContractAddress;
     use starknet::SyscallResultTrait;
@@ -27,6 +27,7 @@ mod test {
     ///////////////////////////////////////////////////////////////////
     ///                           SUCCEEDS                          ///
     ///////////////////////////////////////////////////////////////////
+    
     #[test]
     fn test_get_tree_depth() {
         let mut world_id: ComponentState = Default::default();
@@ -85,15 +86,15 @@ mod test {
         world_id._receive_root(new_root);
 
         world_id.require_valid_root(new_root);
+        
         assert!(world_id.latest_root() == new_root);
     }
 
     ///////////////////////////////////////////////////////////////////
     ///                           PANICS                            ///
     ///////////////////////////////////////////////////////////////////
-
-    #[test]
     #[should_panic]
+    #[test]
     fn test_constructor_with_invalid_tree_depth() {
         let mut world_id: ComponentState = Default::default();
         let tree_depth: u8 = 15; 
