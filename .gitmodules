@@ -5,5 +5,5 @@
 	path = state_bridge_l1/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std.git
 [submodule "state_bridge_service/evm-indexer"]
-    path = state_bridge_service/evm-indexer
-    url = https://github.com/llamafolio/evm-indexer
+	path = state_bridge_service/evm-indexer
+	url = https://github.com/llamafolio/evm-indexer
