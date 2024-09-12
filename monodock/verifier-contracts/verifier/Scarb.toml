@@ -7,7 +7,6 @@ cairo-version = "2.6.3"
 [dependencies]
 bn = { git = "https://github.com/shramee/cairo_bn.git", branch = "main" }                 # bn = { path = ".." }
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.30.0" }
-garaga = { git = "https://github.com/keep-starknet-strange/garaga.git", tag = "v0.13.2.3"}
 starknet = "2.6.3"
 
 [[target.starknet-contract]]
