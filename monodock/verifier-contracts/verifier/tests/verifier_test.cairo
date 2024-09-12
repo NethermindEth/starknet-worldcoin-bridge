@@ -1,4 +1,5 @@
-use snforge_std::{declare, ContractClassTrait};
+use snforge_std::{declare, ContractClassTrait, DeclareResult};
+use snforge_std::cheatcodes::contract_class::ContractClass;
 use bn::traits::FieldOps;
 use bn::curve::groups::ECOperations;
 use bn::g::{Affine, AffineG1Impl, AffineG2Impl, g1, g2, AffineG1, AffineG2,};
@@ -80,7 +81,11 @@ fn test_points_on_curve() {
 }
 
 fn deploy() -> IVerifierDispatcher {
-    let contract = declare("Verifier").unwrap();
+    let contract: ContractClass = match declare("Verifier").unwrap() {
+        DeclareResult::Success(class_contract) => class_contract,
+        DeclareResult::AlreadyDeclared(class_contract) => class_contract,
+    };
+
     let (contract_address, _) = contract.deploy(@ArrayTrait::new()).unwrap();
     IVerifierDispatcher { contract_address }
 }

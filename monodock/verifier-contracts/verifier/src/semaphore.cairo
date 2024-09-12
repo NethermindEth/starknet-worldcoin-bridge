@@ -28,6 +28,11 @@ mod Verifier {
     use pairing::optimal_ate_impls::{SingleMillerPrecompute, SingleMillerSteps};
     use verifier::constants::vk;
     use verifier::{Proof, Input};
+    use garaga::definitions::{
+        G1Point, G2Point, G1G2Pair, u384, bn_bits, bls_bits, MillerLoopResultScalingFactor, E12D,
+        BNProcessedPair, BLSProcessedPair, get_p, E12DMulQuotient, G2Line, E12DDefinitions,
+    };
+    use garaga::groth16::{Groth16Proof, Groth16VerifyingKey}; 
 
     #[storage]
     struct Storage {}
@@ -45,9 +50,53 @@ mod Verifier {
         ///
         /// Returns `true` if the proof is valid, `false` otherwise.
         fn verify_proof(self: @ContractState, proof: Proof, inputs: Input) -> bool {
-            self.ec_pairings(proof, inputs)
+            //self.ec_pairings(proof, inputs)
+            
+            // Public Inputs
+            let a = G1Point {x: proof.a_x.into(), y: proof.a_y.into()};  
+            let b = G2Point {x0: proof.b1_x.into(), y0: proof.b1_y.into(), x1: proof.b0_x.into(), y1: proof.b0_y.into()}; 
+            let c = G1Point {x: proof.c_x.into(), y: proof.c_y.into()};  
+
+            let input: Array<u256> = array![inputs.root, inputs.signal, inputs.ext_nullifier, inputs.nullifier]; 
+            let public_inputs: Span<u256> = input.span(); 
+            
+            let groth16_proof = Groth16Proof {a, b, c, public_inputs};  
+
+            // Verification Key
+            let (alpha, beta, gamma, delta, alpha_beta_miller, ic_0, ic_1, ic_2, ic_3, ic_4) = vk();
+            let alpha_beta_miller_loop_result: E12D = E12D {
+                w0: alpha_beta_miller.c0.c0.c0.c0.into(),
+                w1: alpha_beta_miller.c0.c0.c1.c0.into(),
+                w2: alpha_beta_miller.c0.c1.c0.c0.into(),
+                w3: alpha_beta_miller.c0.c1.c1.c0.into(),
+                w4: alpha_beta_miller.c0.c2.c0.c0.into(),
+                w5: alpha_beta_miller.c0.c2.c1.c0.into(),
+                w6: alpha_beta_miller.c1.c0.c0.c0.into(),
+                w7: alpha_beta_miller.c1.c0.c1.c0.into(),
+                w8: alpha_beta_miller.c1.c1.c0.c0.into(),
+                w9: alpha_beta_miller.c1.c1.c1.c0.into(),
+                w10: alpha_beta_miller.c1.c2.c0.c0.into(),
+                w11: alpha_beta_miller.c1.c2.c1.c0.into(),
+            };
+            let gamma_g2: G2Point = G2Point {
+                x0: gamma.x.c0.c0.into(), 
+                y0: gamma.y.c0.c0.into(), 
+                x1: gamma.x.c1.c0.into(), 
+                y1: gamma.y.c1.c0.into()
+            }; 
+
+            let delta_g2: G2Point = G2Point {
+                x0: delta.x.c0.c0.into(), 
+                y0: delta.y.c0.c0.into(), 
+                x1: delta.x.c1.c0.into(), 
+                y1: delta.y.c1.c0.into()
+            }; 
+
+            let verification_key = Groth16VerifyingKey {alpha_beta_miller_loop_result, gamma_g2, delta_g2};
+            false
         }
     }
+
 
     #[generate_trait]
     impl Private of PrivateTrait {

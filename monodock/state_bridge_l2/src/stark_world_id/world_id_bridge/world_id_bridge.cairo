@@ -4,11 +4,8 @@
 #[starknet::interface]
 pub trait IWorldIDExt<TContractState> {
     fn require_valid_root(self: @TContractState, root: u256);
-
     fn latest_root(self: @TContractState) -> u256;
-
     fn root_history_expiry(self: @TContractState) -> felt252;
-
     fn get_tree_depth(self: @TContractState) -> u8;
 }
 
@@ -21,20 +18,20 @@ pub trait IWorldIDExt<TContractState> {
 ///      code reuse.
 /// @dev This contract is very explicitly not able to be instantiated. Do not turn into contract. 
 #[starknet::component]
-#[feature("deprecated_legacy_map")]
 pub mod WorldID {
     use starknet::get_block_timestamp;
+    use starknet::storage::Map;
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     const NULL_ROOT_TIME: u8 = 0;
-    use core::starknet::storage::Map;
+    use garaga::groth16::verify_groth16_bn254; 
     
     #[storage]
     struct Storage {
         tree_depth: u8, // immutable
         root_history_expiry: felt252,
         latest_root: u256,
-        root_history: LegacyMap::<u256, u128>,
+        root_history: Map::<u256, u128>,
         //semaphoreVerifier: Semaphore,
 
     }
@@ -142,7 +139,6 @@ pub mod WorldID {
     #[embeddable_as(WorldIDImplVerify)]
     impl WorldIDVerify<TContractState, +HasComponent<TContractState>> of interface_world_id::IWorldID<ComponentState<TContractState>> {
 
-        // TODO: 
         ///////////////////////////////////////////////////////////////////////////////
         ///                             SEMAPHORE PROOFS                            ///
         ///////////////////////////////////////////////////////////////////////////////
@@ -159,11 +155,11 @@ pub mod WorldID {
         ///
         /// @custom:reverts string If the zero-knowledge proof cannot be verified for the public inputs.
         fn verify_proof(self: @ComponentState<TContractState>, 
-        root: u256,
-        signalHash: u256,
-        nullifierHash: u256,
-        externalNullifierHash: u256,
-        proof: Array<u256>) {
+            root: u256,
+            signalHash: u256,
+            nullifierHash: u256,
+            externalNullifierHash: u256,
+            proof: Array<u256>) {
     
         }   
     }
