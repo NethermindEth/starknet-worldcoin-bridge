@@ -23,16 +23,19 @@ pub mod WorldID {
     use starknet::storage::Map;
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
+    use garaga::definitions::{G1Point, G1G2Pair, E12DMulQuotient};
+    use garaga::groth16::{Groth16Proof, MPCheckHintBN254};
+    use semaphore_verifier::groth16_verifier::IGroth16VerifierBN254;
+
     const NULL_ROOT_TIME: u8 = 0;
-    
+    const ONE_WEEK: felt252 = 604800;
+
     #[storage]
     struct Storage {
         tree_depth: u8, // immutable
         root_history_expiry: felt252,
         latest_root: u256,
         root_history: Map::<u256, u128>,
-        //semaphoreVerifier: Semaphore,
-
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -153,13 +156,21 @@ pub mod WorldID {
         /// @param proof The zero-knowledge proof
         ///
         /// @custom:reverts string If the zero-knowledge proof cannot be verified for the public inputs.
-        fn verify_proof(self: @ComponentState<TContractState>, 
+        fn verify_proof(
+            self: @ComponentState<TContractState>, 
             root: u256,
             signalHash: u256,
             nullifierHash: u256,
             externalNullifierHash: u256,
-            proof: Array<u256>) {
-    
+            proof: Array<u256>, 
+            mpcheck_hint: MPCheckHintBN254,
+            small_Q: E12DMulQuotient,
+            msm_hint: Array<felt252>,
+            groth16_verifier: ContractAddress,
+        ) {
+            require_valid_root(root); 
+
+            
         }   
     }
     
@@ -175,8 +186,7 @@ pub mod WorldID {
         /// @param _treeDepth The depth of the identities merkle tree.
         fn _intialize(ref self: ComponentState<TContractState>, tree_depth: u8) {
             // initialize ROOT_HISTORY_EXPIRY
-            let one_week: felt252 = 604800;
-            self.root_history_expiry.write(one_week); 
+            self.root_history_expiry.write(ONE_WEEK); 
             assert(validate(tree_depth), Errors::UNSUPPORTED_TREE_DEPTH); 
             self.tree_depth.write(tree_depth);
         }

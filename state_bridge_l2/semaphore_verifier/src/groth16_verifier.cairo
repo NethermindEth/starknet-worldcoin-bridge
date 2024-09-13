@@ -3,7 +3,7 @@ use garaga::groth16::{Groth16Proof, MPCheckHintBN254};
 use super::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
 
 #[starknet::interface]
-trait IGroth16VerifierBN254<TContractState> {
+pub trait IGroth16VerifierBN254<TContractState> {
     fn verify_groth16_proof_bn254(
         ref self: TContractState,
         groth16_proof: Groth16Proof,
