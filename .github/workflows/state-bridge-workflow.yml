@@ -40,5 +40,5 @@ jobs:
 
       - name: Run tests with snforge
         run: |
-          cd state_bridge
+          cd state_bridge_l2
           snforge test
