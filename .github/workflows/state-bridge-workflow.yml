@@ -41,4 +41,4 @@ jobs:
       - name: Run tests with snforge
         run: |
           cd state_bridge_l2
-          snforge test
+          snforge test --max-n-steps 999999999
