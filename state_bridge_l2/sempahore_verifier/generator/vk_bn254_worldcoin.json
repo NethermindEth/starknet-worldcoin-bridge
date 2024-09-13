@@ -1,0 +1,61 @@
+{
+    "eliptic_curve_id": "bn254",
+    "verifying_key": {
+        "alpha_g1": {
+            "x": "0x2d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e2",
+            "y": "0x14bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d1926"
+        },
+        "beta_g2": {
+            "x": [
+                "0xe187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab",
+                "0x967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c"
+            ],
+            "y": [
+                "0x192a8cc13cd9f762871f21e43451c6ca9eeab2cb2987c4e366a185c25dac2e7f",
+                "0x1752a100a72fdf1e5a5d6ea841cc20ec838bccfcf7bd559e79f1c9c759b6a0"
+            ]
+        },
+        "gamma_g2": {
+            "x": [
+                "0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed",
+                "0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2"
+            ],
+            "y": [
+                "0x1d9befcd05a5323e6da4d435f3b617cdb3af83285c2df711ef39c01571827f9d",
+                "0x275dc4a288d1afb3cbb1ac09187524c7db36395df7be3b99e673b13a075a65ec"
+            ]
+        },
+        "delta_g2": {
+            "x": [
+                "0x2139a256456825daa623957c4f2ea1a0d26f135769e450759142a7159b0a4476",
+                "0x168e4fddac50a40d5bcff39c7fa9207cd368444c0c01a86690a6645b52f3aa1f"
+            ],
+            "y": [
+                "0x142ad7a93ca0c554a9f0303059e5a24e85400004a730598bd423b0090f4b3d4a",
+                "0x7859424108de88bfbe5c80a19c0e80ba35fda4383d3fd125305dd04b4c08fe4"
+            ]
+        },
+        "ic": [
+            {
+                "x": "0x335f514c2acb9b255aae85514122267cd7d16e374c6231a2c34417d34491254",
+                "y": "0x7fa1580c1cc3ed4f6d660c6f60f86afedd8a12fb90b2e8ed4f7e310c88b97f7"
+            },
+            {
+                "x": "0x20b781dd0db3b7980a4b3814128c86e597e1442d0fc9eb7f932a5229494d6b79",
+                "y": "0x17d1cef436eb2f665670c7b34854e62c227043a7b111a539c0295518bbab3ca9"
+            },
+            {
+                "x": "0x260945445b4205f874ab7e203a18240e51c9d3c896ea300d40132b1c2f50299a",
+                "y": "0x11087a8b76b0f957e1c482c909302916795f811a06866059e403689c01c903fb"
+            },
+            {
+                "x": "0x11d20fd81c0e5cf48ba1469ccb8ac99dcdc7cf746a6e70762a939d63dcc52dbf",
+                "y": "0x2d447c5f134eff527d7bcaace88b3842c42b800d8dc049e0a6e72f5efc14293d"
+            },
+            {
+                "x": "0x107cd54a1606a6a873bed4c1b76af48975e66dcf6c127b4c799ad4fdd230b87c",
+                "y": "0x1a51b81f6c07725ebcc56ebb1c482b99340eaa9bcb86cc09aed6f58a28e530b6"
+            }
+        ]
+    }
+}

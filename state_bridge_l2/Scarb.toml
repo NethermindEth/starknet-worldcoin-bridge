@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "verifier",
-    "world_id_state_bridge"
+    "world_id_state_bridge",
+    "semaphore_verifier"
 ]

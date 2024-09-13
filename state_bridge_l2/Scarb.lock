@@ -38,4 +38,5 @@ version = "0.1.0"
 dependencies = [
  "garaga",
  "snforge_std",
+ "verifier",
 ]
