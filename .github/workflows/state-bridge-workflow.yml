@@ -1,9 +1,9 @@
-name: State Bridge Devlopment & Tests
+name: State Bridge L2 Testing
 
 on:
   push:
     branches:
-      - state_bridge
+      - main
 
 jobs:
   build_and_push:
