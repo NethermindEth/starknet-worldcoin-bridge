@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - organize_and_clean
 
 jobs:
   build_and_push:
