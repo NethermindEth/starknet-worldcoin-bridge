@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - organize_and_clean
+      - 'dev-*' 
 
 jobs:
   build_and_push:
@@ -34,7 +35,7 @@ jobs:
 
       - name: Build contract with scarb
         run: |
-          cd state_bridge
+          cd state_bridge_l2
           scarb build
 
       - name: Run tests with snforge
