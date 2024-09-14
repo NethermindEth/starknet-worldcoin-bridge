@@ -9,15 +9,11 @@ Install:
 -  [starkli](https://book.starkli.rs/installation) Deploy and declare smart contracts. 
 -  [katana](https://book.dojoengine.org/toolchain/katana/interact) Local starknet node
 -  [starknet-foundry](https://github.com/foundry-rs/starknet-foundry) Starknet Foundry for testing
+
 Versions used:
 - scarb [2.8.0]
 - starkli [0.2.9]
 - katana [0.7.0-alpha.1]
-
-Git submodules are used for the library, install via:
-```bash
-git submodule update --init --recursive
-```
 
 ## Unit Testing
 CD
