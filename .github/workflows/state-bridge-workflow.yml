@@ -35,10 +35,10 @@ jobs:
 
       - name: Build contract with scarb
         run: |
-          cd state_bridge_l2
+          cd state_bridge_l2/world_id_state_bridge
           scarb build
 
       - name: Run tests with snforge
         run: |
-          cd state_bridge_l2
-          snforge test --max-n-steps 999999999
+          cd state_bridge_l2/world_id_state_bridge
+          snforge test 
