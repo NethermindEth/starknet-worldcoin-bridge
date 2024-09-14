@@ -14,7 +14,7 @@ Key Details:
 1. Deploy the L1 contract using the Address of the (World ID Manager)(https://docs.starknet.io/tools/important-addresses/), a temporary L2 address (ie. 1), and the address of the (Starknet Sequencer - Core Contract)[https://docs.starknet.io/tools/important-addresses/]
 2. Take the L1 contract deployed address and use it to deploy the L2 contract along with the fixed tree depth of 30.
 3. Take the L2 address and change the L1 contract's L2 address by invoking the "setStarkWorldIDAddress(uint256)" function with the L2 address
-4. Bridge is now setup. You can propogate root by sending in eth as value parameter. 
+4. Bridge is now setup. You can propagate root by sending in eth as value parameter. 
 
 ## Local Testing Setup (Deprecated)
 * Note: This local setup is deprecated due to bridge version upgrade not being compatible with the katana json rpc version that is used in tandem with starkli
