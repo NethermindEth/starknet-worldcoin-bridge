@@ -14,6 +14,7 @@ Versions used:
 - scarb [2.8.0]
 - starkli [0.2.9]
 - katana [0.7.0-alpha.1]
+- snforge [0.30.0]
 
 ## Unit Testing
 CD
