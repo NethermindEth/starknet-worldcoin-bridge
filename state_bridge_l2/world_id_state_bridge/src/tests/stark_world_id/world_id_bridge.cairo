@@ -3,11 +3,7 @@ mod tests {
     use world_id_state_bridge::tests::mocks::world_id_bridge_mock::WorldIDBridgeMock;
     use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID;
     use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID::{WorldIDImpl, InternalImpl};
-    use snforge_std::{declare, ContractClass, ContractClassTrait};
 
-    use starknet::ContractAddress;
-    use starknet::SyscallResultTrait;
-    use starknet::testing::set_block_timestamp;
     type ComponentState = WorldID::ComponentState<WorldIDBridgeMock::ContractState>;
 
     impl TestingStateDefault of Default<ComponentState> {

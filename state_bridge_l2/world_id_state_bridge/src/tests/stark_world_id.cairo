@@ -7,14 +7,11 @@ mod world_id_bridge;
 
 #[cfg(test)]
 mod tests {
-    use starknet::{ContractAddress, get_caller_address, EthAddress};
+    use starknet::{ContractAddress, EthAddress};
     use snforge_std::cheatcodes::contract_class::ContractClass;
     use snforge_std::{declare, ContractClassTrait, DeclareResult};
-    use world_id_state_bridge::stark_world_id::interface_stark_world_id::{IStarkWorldIDDispatcher, IStarkWorldIDDispatcherTrait, IStarkWorldIDSafeDispatcher, IStarkWorldIDSafeDispatcherTrait};
-    use world_id_state_bridge::stark_world_id::world_id_bridge::world_id_bridge::{IWorldIDExtSafeDispatcher, IWorldIDExtSafeDispatcherTrait};
+    use world_id_state_bridge::stark_world_id::interface_stark_world_id::IStarkWorldIDSafeDispatcher;
     use world_id_state_bridge::stark_world_id::StarkWorldID;
-    use world_id_state_bridge::stark_world_id::world_id_bridge::WorldID;
-    use core::starknet::syscalls::deploy_syscall;
 
     const TEST_ADDRESS: felt252 = 111; 
     const INVALID_TEST_ADDRESS: felt252 = 222; 

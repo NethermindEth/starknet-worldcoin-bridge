@@ -15,8 +15,6 @@ pub trait IWorldIDExt<TContractState> {
     fn get_tree_depth(self: @TContractState) -> u8;
 }
 
-use super::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
-
 //! Bridged World ID
 //! 
 //! ## Author 
@@ -37,13 +35,13 @@ pub mod WorldID {
     use starknet::SyscallResultTrait;
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
+    use world_id_state_bridge::stark_world_id::world_id_bridge::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
     use garaga::definitions::{G1Point, G1G2Pair, E12DMulQuotient};
     use garaga::groth16::{
         multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result, Groth16Proof,
         MPCheckHintBN254
     };
     use garaga::ec_ops::{G1PointTrait, G2PointTrait, ec_safe_add};
-    use super::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
 
     const ECIP_OPS_CLASS_HASH: felt252 =
         0x25bdbb933fdbef07894633039aacc53fdc1f89c6cf8a32324b5fefdcc3d329e;
