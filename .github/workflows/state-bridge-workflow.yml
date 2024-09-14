@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - organize_and_clean
       - 'dev-*' 
 
 jobs:
