@@ -1,6 +1,6 @@
 <div align="center">
   <h1>The Worldcoin <=> Starknet Bridge</h1>
-<div align="center">
+</div>
 
 ## About
 Currently contains all smart contracts for L1 and L2.
