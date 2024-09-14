@@ -4,8 +4,8 @@ export STARKNET_RPC=http://0.0.0.0:5050
 
 # Parameters 
 messaging_config="./config.json" # Messaging Config
-json_file="./target/dev/world_id_state_bridge_StarkWorldID.contract_class.json" # Output of scarb build
-compiler_version="2.6.2" # Set the compiler version
+json_file="./world_id_state_bridge/target/dev/world_id_state_bridge_StarkWorldID.contract_class.json" # Output of scarb build
+compiler_version="2.8.0" # Set the compiler version
 l1_address="0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0" # L1 Contract Address of Bridge
 tree_depth="30" # Tree Depth
 salt="0x1234" # Salt

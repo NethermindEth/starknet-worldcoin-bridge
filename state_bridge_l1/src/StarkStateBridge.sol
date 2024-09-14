@@ -29,16 +29,16 @@ contract StarkStateBridge is Ownable {
     address public starknetCoreContract;
 
     /// @notice Amount of gas purchased on Starknet for propagateRoot
-    uint32 internal _gasLimitPropagateRoot;
+    uint256 internal _gasLimitPropagateRoot;
 
     /// @notice Amount of gas purchased on Starknet for SetRootHistoryExpiry
-    uint32 internal _gasLimitSetRootHistoryExpiry;
+    uint256 internal _gasLimitSetRootHistoryExpiry;
 
     /// @notice Amount of gas purchased on Starknet for transferOwnership
-    uint32 internal _gasLimitTransferOwnership;
+    uint256 internal _gasLimitTransferOwnership;
 
     /// @notice The default gas limit amount to buy on Starknet to do simple transactions
-    uint32 public constant DEFAULT_STARK_GAS_LIMIT = 1000000;
+    uint256 public constant DEFAULT_STARK_GAS_LIMIT = 10000000000;
 
     ///////////////////////////////////////////////////////////////////
     ///                            EVENTS                           ///
@@ -61,15 +61,15 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Emitted when the StateBridge sets the gas limit for sendRoot
     /// @param _GasLimit The new GasLimit for sendRoot
-    event SetGasLimitPropagateRoot(uint32 _GasLimit);
+    event SetGasLimitPropagateRoot(uint256 _GasLimit);
 
     /// @notice Emitted when the StateBridge sets the gas limit for SetRootHistoryExpiry
     /// @param _GasLimit The new GasLimit for SetRootHistoryExpiry
-    event SetGasLimitSetRootHistoryExpiry(uint32 _GasLimit);
+    event SetGasLimitSetRootHistoryExpiry(uint256 _GasLimit);
 
     /// @notice Emitted when the StateBridge sets the gas limit for transferOwnership
     /// @param _GasLimit The new GasLimit for transferOwnershipStark
-    event SetGasLimitTransferOwnership(uint32 _GasLimit);
+    event SetGasLimitTransferOwnership(uint256 _GasLimit);
 
     /// @notice Emitted when the StateBridge changes the worldIDIdentityManager
     /// @param _worldIDIdentityManager The new address of worldIDIdentityManager
@@ -172,7 +172,7 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Sets the gas limit for the propagateRoot method
     /// @param _starkGasLimit The new gas limit for the propagateRoot method
-    function setGasLimitPropagateRoot(uint32 _starkGasLimit) external onlyOwner {
+    function setGasLimitPropagateRoot(uint256 _starkGasLimit) external onlyOwner {
         if (_starkGasLimit <= 0) {
             revert GasLimitZero();
         }
@@ -184,7 +184,7 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Sets the gas limit for the SetRootHistoryExpiry method
     /// @param _starkGasLimit The new gas limit for the SetRootHistoryExpiry method
-    function setGasLimitSetRootHistoryExpiry(uint32 _starkGasLimit) external onlyOwner {
+    function setGasLimitSetRootHistoryExpiry(uint256 _starkGasLimit) external onlyOwner {
         if (_starkGasLimit <= 0) {
             revert GasLimitZero();
         }
@@ -196,7 +196,7 @@ contract StarkStateBridge is Ownable {
 
     /// @notice Sets the gas limit for the SetRootHistoryExpiry method
     /// @param _starkGasLimit The new gas limit for the SetRootHistoryExpiry method
-    function setGasLimitTransferOwnership(uint32 _starkGasLimit) external onlyOwner {
+    function setGasLimitTransferOwnership(uint256 _starkGasLimit) external onlyOwner {
         if (_starkGasLimit <= 0) {
             revert GasLimitZero();
         }
