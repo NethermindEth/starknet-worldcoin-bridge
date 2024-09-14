@@ -46,8 +46,6 @@ pub mod WorldID {
     const ECIP_OPS_CLASS_HASH: felt252 =
         0x25bdbb933fdbef07894633039aacc53fdc1f89c6cf8a32324b5fefdcc3d329e;
 
-    //use semaphore_verifier::groth16_verifier::IGroth16VerifierBN254;
-
     const NULL_ROOT_TIME: u8 = 0;
     const ONE_WEEK: felt252 = 604800;
 
