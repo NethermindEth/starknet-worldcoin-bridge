@@ -1,7 +1,12 @@
-use super::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
-/// @title WorldIDBridge Interface
-/// @author Nethermind
-/// @dev Interfaces that will be exposed externally 
+//! WorldIDBridge Interface
+//! 
+//! ## Author 
+//! 
+//! Nethermind
+//! 
+//! ## Notice
+//! 
+//! Interfaces that will be exposed externally 
 #[starknet::interface]
 pub trait IWorldIDExt<TContractState> {
     fn require_valid_root(self: @TContractState, root: u256);
@@ -10,14 +15,21 @@ pub trait IWorldIDExt<TContractState> {
     fn get_tree_depth(self: @TContractState) -> u8;
 }
 
-/// @title Bridged World ID
-/// @author Worldcoin - Nethermind
-/// @notice A base contract for the WorldID state bridges that exist on other chains. The state
-///         bridges manage the root history of the identity merkle tree on chains other than
-///         mainnet.
-/// @dev This contract abstracts the common functionality, allowing for easier understanding and
-///      code reuse.
-/// @dev This contract is very explicitly not able to be instantiated. Do not turn into contract. 
+use super::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
+
+//! Bridged World ID
+//! 
+//! ## Author 
+//! 
+//! Nethermind
+//! 
+//! ## Overview
+//!
+//! The state bridges manage the root history of the identity merkle tree on Starknet. 
+//!
+//! ## Notice
+//! 
+//! This contract is very explicitly a component. 
 #[starknet::component]
 pub mod WorldID {
     use starknet::get_block_timestamp;
@@ -73,6 +85,7 @@ pub mod WorldID {
     ///////////////////////////////////////////////////////////////////////////////
     ///                                  EVENTS                                 ///
     ///////////////////////////////////////////////////////////////////////////////
+    
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
@@ -80,10 +93,12 @@ pub mod WorldID {
         root_history_expiry_set: RootHistoryExpirySet,
     }
 
-    /// @notice Emitted when a new root is received by the contract.
-    ///
-    /// @param root The value of the root that was added.
-    /// @param timestamp The timestamp of insertion for the given root.
+    /// Emitted when a new root is received by the contract.
+    /// 
+    /// # Parameters
+    /// 
+    /// * 'root' - The value of the root that was added.
+    /// * 'param' - timestamp The timestamp of insertion for the given root.
     #[derive(Drop, starknet::Event)]
     struct RootAdded {
         #[key]
@@ -91,9 +106,11 @@ pub mod WorldID {
         timestamp: u128,
     }
 
-    /// @notice Emitted when the expiry time for the root history is updated.
-    ///
-    /// @param newExpiry The new expiry time.
+    /// Emitted when the expiry time for the root history is updated.
+    /// 
+    /// # Parameters
+    /// 
+    /// * 'newExpiry' - The new expiry time.
     #[derive(Drop, starknet::Event)]
     struct RootHistoryExpirySet {
         #[key]
@@ -104,14 +121,20 @@ pub mod WorldID {
     #[embeddable_as(WorldIDImpl)]
     impl WorldID<TContractState, +HasComponent<TContractState>> of super::IWorldIDExt<ComponentState<TContractState>> {
 
-        /// @notice Reverts if the provided root value is not valid.
-        /// @dev A root is valid if it is either the latest root, or not the latest root but has not
+        /// Reverts if the provided root value is not valid.
+        ///
+        /// # Arguments
+        /// 
+        /// * 'root' - The root of the merkle tree to check for validity.
+        ///
+        /// # Panics 
+        /// 
+        /// Panics with ExpiredRoot - If the provided `root` has expired.
+        /// Panics with NonExistentRoot - If the provided `root` does not exist in the history.
+        /// 
+        /// # Notice
+        /// A root is valid if it is either the latest root, or not the latest root but has not
         ///      expired.
-        ///
-        /// @param root The root of the merkle tree to check for validity.
-        ///
-        /// @custom:reverts ExpiredRoot If the provided `root` has expired.
-        /// @custom:reverts NonExistentRoot If the provided `root` does not exist in the history.
         fn require_valid_root(self: @ComponentState<TContractState>, root: u256) {
             if root == self.latest_root.read() {
                 return;
@@ -129,21 +152,23 @@ pub mod WorldID {
         ///                              DATA MANAGEMENT                            ///
         ///////////////////////////////////////////////////////////////////////////////
 
-        /// @notice Gets the value of the latest root.
+        /// Gets the value of the latest root.
         ///
-        /// @custom:reverts NoRootsSeen If there is no latest root.
+        /// # Panics
+        /// 
+        /// Panics with NoRootsSeen - If there is no latest root.
         fn latest_root(self: @ComponentState<TContractState>) -> u256 {
             assert(self.latest_root.read() != 0, Errors::NO_ROOTS_SEEN); 
 
             self.latest_root.read()
         }
 
-        /// @notice Gets the amount of time it takes for a root in the root history to expire.
+        /// Gets the amount of time it takes for a root in the root history to expire.
         fn root_history_expiry(self: @ComponentState<TContractState>) -> felt252{
             self.root_history_expiry.read()
         }
 
-        /// @notice Gets the Semaphore tree depth the contract was initialized with.
+        /// Gets the Semaphore tree depth the contract was initialized with.
         fn get_tree_depth(self: @ComponentState<TContractState>) -> u8{
             self.tree_depth.read()
         }
@@ -156,17 +181,35 @@ pub mod WorldID {
         ///                             SEMAPHORE PROOFS                            ///
         ///////////////////////////////////////////////////////////////////////////////
 
-        /// @notice A verifier for the semaphore protocol.
-        /// @dev Note that a double-signaling check is not included here, and should be carried by the
-        ///      caller.
-        ///
-        /// @param root The root of the Merkle tree
-        /// @param signalHash A keccak256 hash of the Semaphore signal
-        /// @param nullifierHash The nullifier hash
-        /// @param externalNullifierHash A keccak256 hash of the external nullifier
-        /// @param proof The zero-knowledge proof
-        ///
-        /// @custom:reverts string If the zero-knowledge proof cannot be verified for the public inputs.
+        /// A verifier for the semaphore protocol.
+        /// 
+        /// # Arguments 
+        /// 
+        /// * 'groth16_proof' - The zero-knowledge proof (structured as below)
+        ///     Groth16Proof {
+        ///         a: G1Point
+        ///         b: G2Point
+        ///         c: G1Point
+        ///         public_inputs: Span<u256>
+        ///     }
+        ///     The public inputs are in order:
+        ///     * 'root' - The root of the Merkle tree
+        ///     * 'signalHash' - A keccak256 hash of the Semaphore signal
+        ///     * 'nullifierHash' - The nullifier hash
+        ///     * 'externalNullifierHash' - A keccak256 hash of the external nullifier
+        /// 
+        /// * 'mpcheck_hint' - The check hint for BN254
+        /// * 'small_Q' - The small Q for BN254
+        /// * 'msm_hint' - The multiscalar multiplication hint for BN254
+        /// 
+        /// # Returns
+        /// 
+        /// Either panics or succeeds on verification
+        /// 
+        /// # Notice
+        /// 
+        /// The the mpcheck_hint, small_Q, and msm_hint are precomputed using Garaga's pythonic backend. Use the Garaga verifier to verify.
+        /// https://github.com/keep-starknet-strange/garaga
         fn verify_proof(
             self: @ComponentState<TContractState>, 
             groth16_proof: Groth16Proof,
@@ -210,7 +253,7 @@ pub mod WorldID {
                 }
             };
             // Perform the pairing check.
-            assert!(multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result(
+            assert(multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result(
                 G1G2Pair { p: vk_x, q: vk.gamma_g2 },
                 G1G2Pair { p: groth16_proof.c, q: vk.delta_g2 },
                 G1G2Pair { p: groth16_proof.a.negate(0), q: groth16_proof.b },
@@ -218,7 +261,7 @@ pub mod WorldID {
                 precomputed_lines.span(),
                 mpcheck_hint,
                 small_Q
-            ));
+            ) == true, 'Verification Failed');
         }   
     }
     
@@ -229,9 +272,11 @@ pub mod WorldID {
         ///                               CONSTRUCTION                              ///
         ///////////////////////////////////////////////////////////////////////////////
 
-        /// @notice Constructs a new instance of the state bridge.
+        /// Constructs a new instance of the state bridge.
         ///
-        /// @param _treeDepth The depth of the identities merkle tree.
+        /// # Arguments
+        /// 
+        /// * 'tree_depth' - The depth of the identities merkle tree.
         fn _intialize(ref self: ComponentState<TContractState>, tree_depth: u8) {
             // initialize ROOT_HISTORY_EXPIRY
             self.root_history_expiry.write(ONE_WEEK); 
@@ -243,14 +288,16 @@ pub mod WorldID {
         ///                              ROOT MIRRORING                             ///
         ///////////////////////////////////////////////////////////////////////////////
 
-        /// @notice This function is called by the state bridge contract when it forwards a new root to
+        /// This function is called by the state bridge contract when it forwards a new root to
         ///         the bridged WorldID.
-        /// @dev Intended to be called from a privilege-checked implementation of `receiveRoot` or an
-        ///      equivalent operation.
         ///
-        /// @param newRoot The value of the new root.
+        /// # Arguments
+        /// 
+        /// * 'new_root' - The value of the new root.
         ///
-        /// @custom:reverts CannotOverwriteRoot If the root already exists in the root history.
+        /// # Panics
+        /// 
+        /// Panic with CannotOverwriteRoot - If the root already exists in the root history.
         fn _receive_root(ref self: ComponentState<TContractState>, new_root: u256) {
             let existing_timestamp: u128 = self.root_history.read(new_root);
 
@@ -264,13 +311,13 @@ pub mod WorldID {
             self.emit(RootAdded {root: new_root, timestamp: curr_timestamp});
         }       
 
-        /// @notice Sets the amount of time it takes for a root in the root history to expire.
-        /// @dev Intended to be called from a privilege-checked implementation of `receiveRoot`.
-        ///
-        /// @param expiryTime The new amount of time it takes for a root to expire.
+        /// Sets the amount of time it takes for a root in the root history to expire.
+        /// 
+        /// # Arguments
+        /// 
+        /// * 'expiry_time' - The new amount of time it takes for a root to expire.
         fn _set_root_history_expiry(ref self: ComponentState<TContractState>, expiry_time: felt252) {
             self.root_history_expiry.write(expiry_time); 
-
             self.emit(RootHistoryExpirySet {new_expiry: expiry_time});
         }
     }
