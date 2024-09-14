@@ -1,3 +1,6 @@
+use garaga::definitions::E12DMulQuotient;
+use garaga::groth16::{Groth16Proof, MPCheckHintBN254};
+
 /// @title WorldID Interface
 /// @author Worldcoin - Ported by Nethermind
 /// @notice The interface to the Semaphore Groth16 proof verification for WorldID.
@@ -18,9 +21,9 @@
 pub trait IWorldID<TContractState> {
     fn verify_proof(
         self: @TContractState,
-        root: u256,
-        signalHash: u256,
-        nullifierHash: u256,
-        externalNullifierHash: u256,
-        proof: Array<u256>);
+        groth16_proof: Groth16Proof,
+        mpcheck_hint: MPCheckHintBN254,
+        small_Q: E12DMulQuotient,
+        msm_hint: Array<felt252>
+    );
 }

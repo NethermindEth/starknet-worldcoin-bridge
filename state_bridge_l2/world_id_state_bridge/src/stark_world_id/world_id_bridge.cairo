@@ -1,3 +1,4 @@
+mod groth16_verifier_constants;
 mod interface_world_id;
 mod semaphore_tree_depth_validator;
 pub mod world_id_bridge;
