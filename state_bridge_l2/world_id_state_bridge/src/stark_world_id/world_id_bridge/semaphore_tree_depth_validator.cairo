@@ -1,8 +1,14 @@
 /// SemaphoreTreeDepthValidator 
-/// @notice Checks if the provided `treeDepth` is among supported depths.
+/// 
+/// Checks if the provided `treeDepth` is among supported depths.
 ///
-/// @param treeDepth The tree depth to validate.
-/// @return supportedDepth Returns `true` if `treeDepth` is between 16 and 32
+/// # Arguments
+/// 
+/// * 'treeDepth' - The tree depth to validate.
+/// 
+/// # Returns
+/// 
+/// Returns `true` if `treeDepth` is between 16 and 32
 #[external(v0)]
 pub fn validate(tree_depth: u8) -> bool {
     let min_depth: u8 = 16;

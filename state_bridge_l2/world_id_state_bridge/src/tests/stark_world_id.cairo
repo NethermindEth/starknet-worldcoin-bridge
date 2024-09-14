@@ -1,8 +1,9 @@
 mod world_id_bridge; 
 
-// ** Note ** 
-// These tests use the L1 handler functions as though they are external, in production, other contracts or EOAs 
-// should not be able to call the L1 handlers. Only the starknet sequencer should be able to call.  
+/// # Notice
+///
+/// These tests use the L1 handler functions as though they are external, in production, other contracts or EOAs 
+/// should not be able to call the L1 handlers. Only the starknet sequencer should be able to call.  
 
 #[cfg(test)]
 mod tests {

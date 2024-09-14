@@ -1,4 +1,14 @@
-/// Mock Test Contract
+//! # Title
+//! 
+//! Starknet World ID Bridge Smart Contract
+//!
+//! ## Author 
+//! 
+//! Nethermind
+//!
+//! ## License
+//! 
+//! MIT
 
 pub mod interface_stark_world_id;
 pub mod cross_domain_ownable;
@@ -51,15 +61,17 @@ pub mod StarkWorldID {
     ///                                ROOT MIRRORING                           ///
     ///////////////////////////////////////////////////////////////////////////////
 
-    /// @notice This function is called by the state bridge contract when it forwards a new root to
+    /// This function is called by the state bridge contract when it forwards a new root to
     ///         the bridged WorldID.
-    /// @dev    This function can revert if Nethermind's CrossDomainMessenger stops processing proofs
-    ///         or if Nethermind stops submitting them. 
+    /// 
+    /// # Arguments
     ///
-    /// @param newRoot The value of the new root.
+    /// * 'newRoot' - The value of the new root.
     ///
-    /// @custom:reverts CannotOverwriteRoot If the root already exists in the root history.
-    /// @custom:reverts string If the caller is not the owner.
+    /// # Panics
+    /// 
+    /// Panics with CannotOverwriteRoot - If the root already exists in the root history.
+    /// Panics with string - If the caller is not the owner.
     #[l1_handler]
     pub fn receive_root(ref self: ContractState, from_address: felt252, new_root: u256) {
         self.cross_domain_ownable_storage.only_cross_domain_owner(from_address); 
@@ -69,18 +81,29 @@ pub mod StarkWorldID {
     ///////////////////////////////////////////////////////////////////////////////
     ///                              DATA MANAGEMENT                            ///
     ///////////////////////////////////////////////////////////////////////////////
+    
+    /// Sets the amount of time it takes for a root in the root history to expire.
+    ///
+    /// # Arguments
     /// 
-    /// @notice Sets the amount of time it takes for a root in the root history to expire.
-    ///
-    /// @param expiryTime The new amount of time it takes for a root to expire.
-    ///
-    /// @custom:reverts string If the caller is not the owner.
+    /// * 'expiryTime' - The new amount of time it takes for a root to expire.
+    /// 
+    /// # Panics
+    /// 
+    /// Panics - If the caller is not the owner.
     #[l1_handler]
     pub fn set_root_history_expiry(ref self: ContractState, from_address: felt252, expiry_time: felt252) {
         self.cross_domain_ownable_storage.only_cross_domain_owner(from_address); 
         self.world_id_storage._set_root_history_expiry(expiry_time); 
     }
 
+    /// This function transfers ownership to another L1 State Bridge Contract
+    /// 
+    /// # Notice
+    /// 
+    /// This function is not transferring ownership to another EOA, instead it is specifically
+    ///     transferring the contract address of the L1 contract. This is in case the L1 contract
+    ///     needs to be replaced/modified/etc.
     #[l1_handler]
     pub fn transfer_ownership(ref self: ContractState, from_address: felt252, new_owner: EthAddress){
         self.cross_domain_ownable_storage.only_cross_domain_owner(from_address); 
