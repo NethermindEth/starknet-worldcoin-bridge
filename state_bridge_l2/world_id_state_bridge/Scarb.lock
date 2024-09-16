@@ -4,7 +4,7 @@ version = 1
 [[package]]
 name = "garaga"
 version = "0.1.0"
-source = "git+https://github.com/keep-starknet-strange/garaga.git?tag=v0.13.2.3#3781978612fdc2f9cb389070751f1abdae8e99a0"
+source = "git+https://github.com/keep-starknet-strange/garaga.git?tag=v0.13.3#c80fb9bd79cdc497ef34faa6e2a620fb678e7dac"
 
 [[package]]
 name = "snforge_scarb_plugin"

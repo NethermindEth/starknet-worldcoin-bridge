@@ -37,10 +37,10 @@ pub mod CrossDomainOwnable {
         new_l1_owner: EthAddress,
 
     }
+
     #[generate_trait]
     pub impl InternalImpl<TContractState, +HasComponent<TContractState>> of InternalTrait<TContractState> {
         fn _initialize(ref self: ComponentState<TContractState>, owner: EthAddress) {
-
             self.emit(NewL1Owner {previous_l1_owner: self.l1_owner.read(), new_l1_owner: owner});
             self.l1_owner.write(owner); 
         }

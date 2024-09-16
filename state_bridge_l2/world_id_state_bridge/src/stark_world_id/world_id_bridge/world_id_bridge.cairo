@@ -36,15 +36,15 @@ pub mod WorldID {
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     use world_id_state_bridge::stark_world_id::world_id_bridge::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
-    use garaga::definitions::{G1Point, G1G2Pair, E12DMulQuotient};
-    use garaga::groth16::{
-        multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result, Groth16Proof,
-        MPCheckHintBN254
-    };
+    use garaga::definitions::{G1Point, G1G2Pair};
+    use garaga::groth16::multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result;
+    use garaga::utils::calldata::{deserialize_full_proof_with_hints_bn254};
     use garaga::ec_ops::{G1PointTrait, G2PointTrait, ec_safe_add};
 
+    // const ECIP_OPS_CLASS_HASH: felt252 =
+    //     0x25bdbb933fdbef07894633039aacc53fdc1f89c6cf8a32324b5fefdcc3d329e;
     const ECIP_OPS_CLASS_HASH: felt252 =
-        0x25bdbb933fdbef07894633039aacc53fdc1f89c6cf8a32324b5fefdcc3d329e;
+        0x7918f484291eb154e13d0e43ba6403e62dc1f5fbb3a191d868e2e37359f8713;
 
     const NULL_ROOT_TIME: u8 = 0;
     const ONE_WEEK: felt252 = 604800;
@@ -208,11 +208,14 @@ pub mod WorldID {
         /// https://github.com/keep-starknet-strange/garaga
         fn verify_proof(
             self: @ComponentState<TContractState>, 
-            groth16_proof: Groth16Proof,
-            mpcheck_hint: MPCheckHintBN254,
-            small_Q: E12DMulQuotient,
-            msm_hint: Array<felt252>
+            full_proof_with_hints: Span<felt252>,
         ) {
+            let fph = deserialize_full_proof_with_hints_bn254(full_proof_with_hints);
+            let groth16_proof = fph.groth16_proof;
+            let mpcheck_hint = fph.mpcheck_hint;
+            let small_Q = fph.small_Q;
+            let msm_hint = fph.msm_hint;
+
             // Require Valid Root
             self.require_valid_root(groth16_proof.public_inputs[0].clone()); 
 
@@ -248,6 +251,7 @@ pub mod WorldID {
                     )
                 }
             };
+
             // Perform the pairing check.
             assert(multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result(
                 G1G2Pair { p: vk_x, q: vk.gamma_g2 },
