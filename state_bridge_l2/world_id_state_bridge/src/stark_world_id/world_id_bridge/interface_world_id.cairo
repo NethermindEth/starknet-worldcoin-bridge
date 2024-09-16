@@ -1,6 +1,3 @@
-use garaga::definitions::E12DMulQuotient;
-use garaga::groth16::{Groth16Proof, MPCheckHintBN254};
-
 //! WorldID Interface
 //! 
 //! ## Author

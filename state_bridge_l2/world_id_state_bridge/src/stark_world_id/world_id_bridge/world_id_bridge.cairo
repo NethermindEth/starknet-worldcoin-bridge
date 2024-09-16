@@ -36,11 +36,8 @@ pub mod WorldID {
     use world_id_state_bridge::stark_world_id::world_id_bridge::interface_world_id;
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     use world_id_state_bridge::stark_world_id::world_id_bridge::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
-    use garaga::definitions::{G1Point, G1G2Pair, E12DMulQuotient};
-    use garaga::groth16::{
-        multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result, Groth16Proof,
-        MPCheckHintBN254
-    };
+    use garaga::definitions::{G1Point, G1G2Pair};
+    use garaga::groth16::multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result;
     use garaga::utils::calldata::{deserialize_full_proof_with_hints_bn254};
     use garaga::ec_ops::{G1PointTrait, G2PointTrait, ec_safe_add};
 
