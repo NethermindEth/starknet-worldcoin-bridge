@@ -18,9 +18,6 @@ jobs:
       - name: Install Foundry 
         run: |
           curl -L https://foundry.paradigm.xyz | bash
-          foundry --version
-          source $HOME/.bashrc
-          foundryup
 
       - name: Install Scarb 2.8.2
         run: |
@@ -30,6 +27,7 @@ jobs:
         run: |
           curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
           snfoundryup
+          foundryup
 
       - name: Set PATH environment variable
         run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
