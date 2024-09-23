@@ -15,7 +15,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install scarb 2.8.2
+      - name: Install Foundry 
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+          foundryup
+
+      - name: Install Scarb 2.8.2
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.8.2
 
