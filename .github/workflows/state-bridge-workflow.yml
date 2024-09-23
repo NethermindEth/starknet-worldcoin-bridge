@@ -18,7 +18,7 @@ jobs:
       - name: Install Foundry 
         run: |
           curl -L https://foundry.paradigm.xyz | bash
-          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          foundry --version
           source $HOME/.bashrc
           foundryup
 
