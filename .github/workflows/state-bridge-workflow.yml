@@ -27,7 +27,6 @@ jobs:
         run: |
           curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
           snfoundryup
-          foundryup
 
       - name: Set PATH environment variable
         run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
@@ -36,6 +35,7 @@ jobs:
         run: |
           scarb --version
           snforge --version
+          foundryup
           foundry --version
 
       - name: Build contract with scarb
