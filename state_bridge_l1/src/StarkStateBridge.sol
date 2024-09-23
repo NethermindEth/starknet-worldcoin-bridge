@@ -150,7 +150,7 @@ contract StarkStateBridge is Ownable {
         uint256[] memory payload = new uint256[](1);
         payload[0] = uint256(uint160(_owner)); 
 
-        IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: _gasLimitSetRootHistoryExpiry}(starkWorldIDAddress, HANDLE_TRANSFER_OWNERSHIP_SELECTOR, payload);
+        IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: _gasLimitTransferOwnership}(starkWorldIDAddress, HANDLE_TRANSFER_OWNERSHIP_SELECTOR, payload);
    
         emit OwnershipTransferredStark(owner(), _owner);
     }
@@ -161,7 +161,7 @@ contract StarkStateBridge is Ownable {
         uint256[] memory payload = new uint256[](1);
         payload[0] = _rootHistoryExpiry; 
 
-        IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: _gasLimitTransferOwnership}(starkWorldIDAddress, HANDLE_SET_ROOT_HISTORY_EXPIRY_SELECTOR, payload);
+        IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: _gasLimitSetRootHistoryExpiry}(starkWorldIDAddress, HANDLE_SET_ROOT_HISTORY_EXPIRY_SELECTOR, payload);
 
         emit SetRootHistoryExpiry(_rootHistoryExpiry);
     }

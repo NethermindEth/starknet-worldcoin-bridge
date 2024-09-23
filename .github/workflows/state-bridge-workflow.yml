@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_and_push:
-    name: Build and Push Docker Image
+    name: Build and Push
     runs-on: ubuntu-latest
 
     steps:
@@ -41,3 +41,10 @@ jobs:
         run: |
           cd state_bridge_l2/world_id_state_bridge
           snforge test 
+
+      - name: Run tests for L1
+        run: |
+          cd state_bridge_l1
+          cp anvil.env .env
+          source .env
+          forge test

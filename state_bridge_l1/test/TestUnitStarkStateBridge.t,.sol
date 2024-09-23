@@ -16,15 +16,15 @@ contract UnitStarkStateBridge is Test {
 
     /// @notice Emitted when the StateBridge sets the gas limit for sendRoot
     /// @param _GasLimit The new GasLimit for sendRoot
-    event SetGasLimitPropagateRoot(uint32 _GasLimit);
+    event SetGasLimitPropagateRoot(uint256 _GasLimit);
 
     /// @notice Emitted when the StateBridge sets the gas limit for SetRootHistoryExpiry
     /// @param _GasLimit The new GasLimit for SetRootHistoryExpiry
-    event SetGasLimitSetRootHistoryExpiry(uint32 _GasLimit);
+    event SetGasLimitSetRootHistoryExpiry(uint256 _GasLimit);
 
     /// @notice Emitted when the StateBridge sets the gas limit for transferOwnership
     /// @param _GasLimit The new GasLimit for transferOwnershipStark
-    event SetGasLimitTransferOwnership(uint32 _GasLimit);
+    event SetGasLimitTransferOwnership(uint256 _GasLimit);
 
     /// @notice Emitted when the StateBridge changes the worldIDIdentityManager
     /// @param _worldIDIdentityManager The new address of worldIDIdentityManager
@@ -38,6 +38,9 @@ contract UnitStarkStateBridge is Test {
     /// @param _starknetCoreContract The new address of starknetCoreContract
     event SetStarknetCoreContract(address _starknetCoreContract);
 
+    uint256 constant TEST_GAS_LIMIT = 111; 
+    address constant TEST_ADDRESS = address(111); 
+    
     function setUp() public {
         starkStateBridge = new StarkStateBridge(worldIDIdentityManager, starkWorldIDAddress, starknetCoreContract);
     }
@@ -45,28 +48,28 @@ contract UnitStarkStateBridge is Test {
 
     function test_SetGasLimitPropagateRoot() public {
         vm.expectEmit();
-        uint32 newGasLimitPropagateRoot = 111; 
+        uint256 newGasLimitPropagateRoot = TEST_GAS_LIMIT; 
         emit SetGasLimitPropagateRoot(newGasLimitPropagateRoot);
         starkStateBridge.setGasLimitPropagateRoot(newGasLimitPropagateRoot);
     }
 
     function test_SetGasLimitSetRootHistoryExpiry() public {
         vm.expectEmit();
-        uint32 newGasLimitSetRootHistoryExpiry = 111; 
+        uint256 newGasLimitSetRootHistoryExpiry = TEST_GAS_LIMIT; 
         emit SetGasLimitSetRootHistoryExpiry(newGasLimitSetRootHistoryExpiry);
         starkStateBridge.setGasLimitSetRootHistoryExpiry(newGasLimitSetRootHistoryExpiry);
     }
 
     function test_SetGasLimitTransferOwnership() public {
         vm.expectEmit();
-        uint32 newGasLimitTransferOwnership = 111; 
+        uint256 newGasLimitTransferOwnership = TEST_GAS_LIMIT; 
         emit SetGasLimitTransferOwnership(newGasLimitTransferOwnership);
         starkStateBridge.setGasLimitTransferOwnership(newGasLimitTransferOwnership);
     }
 
     function test_SetWorldIDIdentityManager() public {
         vm.expectEmit();
-        address newWorldIDIdentityManager = address(111); 
+        address newWorldIDIdentityManager = TEST_ADDRESS;
         emit SetWorldIDIdentityManager(newWorldIDIdentityManager);
         starkStateBridge.setWorldIDIdentityManager(newWorldIDIdentityManager);
     }
@@ -80,7 +83,7 @@ contract UnitStarkStateBridge is Test {
 
     function test_SetStarknetCoreContract() public {
         vm.expectEmit();
-        address newStarknetCoreContract = address(111); 
+        address newStarknetCoreContract = TEST_ADDRESS;
         emit SetStarknetCoreContract(newStarknetCoreContract);
         starkStateBridge.setStarknetCoreContract(newStarknetCoreContract);
     }
