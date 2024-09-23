@@ -17,9 +17,16 @@ jobs:
 
       - name: Install Foundry 
         run: |
+
+      - name: Run tests for L1
+        run: |
           curl -L https://foundry.paradigm.xyz | bash
           export PATH="$HOME/.config/.foundry/bin:$PATH"
           foundryup
+          cd state_bridge_l1
+          cp anvil.env .env
+          source .env
+          forge test   
 
       - name: Install Scarb 2.8.2
         run: |
@@ -48,9 +55,4 @@ jobs:
           cd state_bridge_l2/world_id_state_bridge
           snforge test 
 
-      - name: Run tests for L1
-        run: |
-          cd state_bridge_l1
-          cp anvil.env .env
-          source .env
-          forge test
+     
