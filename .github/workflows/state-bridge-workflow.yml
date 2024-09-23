@@ -18,21 +18,11 @@ jobs:
       - name: Install Foundry 
         run: |
           curl -L https://foundry.paradigm.xyz | bash
-          echo "Checking Foundry installation..."
-          echo "Contents of home directory:"
-          ls -la $HOME
-          echo "Contents of .foundry directory (if it exists):"
-          ls -la $HOME/.foundry || echo ".foundry directory not found"
-          echo "Contents of .foundry/bin directory (if it exists):"
-          ls -la $HOME/.foundry/bin || echo ".foundry/bin directory not found"
-          echo "Searching for foundryup:"
-          find $HOME -name foundryup
-          echo "Current PATH:"
-          echo $PATH
-          echo "Trying to locate foundryup in PATH:"
-          which foundryup || echo "foundryup not found in PATH"
-          export PATH="$HOME/.config/.foundry/bin:$PATH"
-          foundryup || $HOME/.foundry/bin/foundryup
+          echo "Foundry installed. Checking installation..."
+          ls -la $HOME/.config/foundry
+          echo "Adding Foundry to PATH..."
+          echo "$HOME/.config/foundry/bin" >> $GITHUB_PATH
+          source $HOME/.bashrc
 
       - name: Install Scarb 2.8.2
         run: |
