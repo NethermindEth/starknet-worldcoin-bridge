@@ -18,8 +18,9 @@ jobs:
       - name: Install Foundry 
         run: |
           curl -L https://foundry.paradigm.xyz | bash
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
           source $HOME/.bashrc
-          foundryup
+          $HOME/.foundry/bin/foundryup
 
       - name: Install Scarb 2.8.2
         run: |
