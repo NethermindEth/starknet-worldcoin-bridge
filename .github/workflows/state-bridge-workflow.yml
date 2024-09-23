@@ -8,12 +8,18 @@ on:
 
 jobs:
   build_and_push:
-    name: Build and Push Docker Image
+    name: Build and Push
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Install Foundry 
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+          export PATH="$HOME/.config/.foundry/bin:$PATH"
+          foundryup
 
       - name: Install scarb 2.8.2
         run: |
@@ -26,7 +32,7 @@ jobs:
 
       - name: Set PATH environment variable
         run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-
+          
       - name: Check versions
         run: |
           scarb --version
