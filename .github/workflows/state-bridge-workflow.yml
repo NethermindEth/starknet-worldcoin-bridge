@@ -18,6 +18,9 @@ jobs:
       - name: Install Foundry 
         run: |
           curl -L https://foundry.paradigm.xyz | bash
+          echo $PATH
+          ls -l $HOME/.foundry/bin
+          which foundryup
 
       - name: Install Scarb 2.8.2
         run: |
@@ -35,7 +38,6 @@ jobs:
         run: |
           scarb --version
           snforge --version
-          foundryup
           foundry --version
 
       - name: Build contract with scarb
