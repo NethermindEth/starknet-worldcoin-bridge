@@ -18,7 +18,6 @@ jobs:
       - name: Install Foundry 
         run: |
           curl -L https://foundry.paradigm.xyz | bash
-          foundryup
 
       - name: Install Scarb 2.8.2
         run: |
@@ -27,15 +26,20 @@ jobs:
       - name: Install Starknet Foundry
         run: |
           curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
-          snfoundryup
 
       - name: Set PATH environment variable
         run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
 
+      - name: Foundryup
+        run: |
+          foundryup
+          snfoundryup
+          
       - name: Check versions
         run: |
           scarb --version
           snforge --version
+          foundry --version
 
       - name: Build contract with scarb
         run: |
