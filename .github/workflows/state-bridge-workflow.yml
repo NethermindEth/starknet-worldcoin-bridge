@@ -31,6 +31,8 @@ jobs:
           echo $PATH
           echo "Trying to locate foundryup in PATH:"
           which foundryup || echo "foundryup not found in PATH"
+          export PATH="$HOME/.foundry/bin:$PATH"
+          foundryup || $HOME/.foundry/bin/foundryup
 
       - name: Install Scarb 2.8.2
         run: |
