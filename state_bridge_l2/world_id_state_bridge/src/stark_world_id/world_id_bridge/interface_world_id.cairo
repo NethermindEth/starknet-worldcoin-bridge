@@ -1,6 +1,3 @@
-use garaga::definitions::E12DMulQuotient;
-use garaga::groth16::{Groth16Proof, MPCheckHintBN254};
-
 //! WorldID Interface
 //! 
 //! ## Author
@@ -41,9 +38,6 @@ use garaga::groth16::{Groth16Proof, MPCheckHintBN254};
 pub trait IWorldID<TContractState> {
     fn verify_proof(
         self: @TContractState,
-        groth16_proof: Groth16Proof,
-        mpcheck_hint: MPCheckHintBN254,
-        small_Q: E12DMulQuotient,
-        msm_hint: Array<felt252>
+        full_proof_with_hints: Span<felt252>,
     );
 }
