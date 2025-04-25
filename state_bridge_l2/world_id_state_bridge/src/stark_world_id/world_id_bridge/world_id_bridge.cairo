@@ -37,14 +37,12 @@ pub mod WorldID {
     use world_id_state_bridge::stark_world_id::world_id_bridge::semaphore_tree_depth_validator::validate;
     use world_id_state_bridge::stark_world_id::world_id_bridge::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
     use garaga::definitions::{G1Point, G1G2Pair};
-    use garaga::groth16::multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result;
+    use garaga::groth16::{multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result};
+    use garaga::ec_ops::{G1PointTrait, ec_safe_add};
+    use garaga::ec_ops_g2::{G2PointTrait};
     use garaga::utils::calldata::{deserialize_full_proof_with_hints_bn254};
-    use garaga::ec_ops::{G1PointTrait, G2PointTrait, ec_safe_add};
 
-    // const ECIP_OPS_CLASS_HASH: felt252 =
-    //     0x25bdbb933fdbef07894633039aacc53fdc1f89c6cf8a32324b5fefdcc3d329e;
-    const ECIP_OPS_CLASS_HASH: felt252 =
-        0x7918f484291eb154e13d0e43ba6403e62dc1f5fbb3a191d868e2e37359f8713;
+    const ECIP_OPS_CLASS_HASH: felt252 = 0x70e5526b95cf78a249ea0f80e2b569e193dffb31cf8cb1d6827994f4937925f;
 
     const NULL_ROOT_TIME: u8 = 0;
     const ONE_WEEK: felt252 = 604800;
@@ -171,7 +169,7 @@ pub mod WorldID {
     }
 
     #[embeddable_as(WorldIDImplVerify)]
-    impl WorldIDVerify<TContractState, +HasComponent<TContractState>> of interface_world_id::IWorldID<ComponentState<TContractState>> {
+    impl WorldIDVerify<TContractState, +HasComponent<TContractState>> of interface_world_id::IGroth16VerifierBN254<ComponentState<TContractState>> {
 
         ///////////////////////////////////////////////////////////////////////////////
         ///                             SEMAPHORE PROOFS                            ///
@@ -206,10 +204,15 @@ pub mod WorldID {
         /// 
         /// The the mpcheck_hint, small_Q, and msm_hint are precomputed using Garaga's pythonic backend. Use the Garaga verifier to verify.
         /// https://github.com/keep-starknet-strange/garaga
-        fn verify_proof(
-            self: @ComponentState<TContractState>, 
+        
+        fn verify_groth16_proof_bn254(
+            self: @ComponentState<TContractState>,
             full_proof_with_hints: Span<felt252>,
-        ) {
+        ) -> Option<Span<u256>> {
+            // DO NOT EDIT THIS FUNCTION UNLESS YOU KNOW WHAT YOU ARE DOING.
+            // This function returns an Option for the public inputs if the proof is valid.
+            // If the proof is invalid, the execution will either fail or return None.
+            // Read the documentation to learn how to generate the full_proof_with_hints array given a proof and a verifying key.
             let fph = deserialize_full_proof_with_hints_bn254(full_proof_with_hints);
             let groth16_proof = fph.groth16_proof;
             let mpcheck_hint = fph.mpcheck_hint;
@@ -239,9 +242,9 @@ pub mod WorldID {
 
                     // Call the multi scalar multiplication endpoint on the Garaga ECIP ops contract
                     // to obtain vk_x.
-                    let mut _vx_x_serialized = core::starknet::syscalls::library_call_syscall(
+                    let mut _vx_x_serialized = starknet::syscalls::library_call_syscall(
                         ECIP_OPS_CLASS_HASH.try_into().unwrap(),
-                        selector!("msm_g1"),
+                        selector!("msm_g1_u288"),
                         msm_calldata.span()
                     )
                         .unwrap_syscall();
@@ -251,9 +254,8 @@ pub mod WorldID {
                     )
                 }
             };
-
             // Perform the pairing check.
-            assert(multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result(
+            let check = multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result(
                 G1G2Pair { p: vk_x, q: vk.gamma_g2 },
                 G1G2Pair { p: groth16_proof.c, q: vk.delta_g2 },
                 G1G2Pair { p: groth16_proof.a.negate(0), q: groth16_proof.b },
@@ -261,8 +263,71 @@ pub mod WorldID {
                 precomputed_lines.span(),
                 mpcheck_hint,
                 small_Q
-            ) == true, 'Verification Failed');
-        }   
+            );
+            if check == true {
+                return Option::Some(groth16_proof.public_inputs);
+            } else {
+                return Option::None;
+            }
+        }
+        
+        // fn verify_proof(
+        //     self: @ComponentState<TContractState>, 
+        //     full_proof_with_hints: Span<felt252>,
+        // ) {
+        //     let fph = deserialize_full_proof_with_hints_bn254(full_proof_with_hints);
+        //     let groth16_proof = fph.groth16_proof;
+        //     let mpcheck_hint = fph.mpcheck_hint;
+        //     let small_Q = fph.small_Q;
+        //     let msm_hint = fph.msm_hint;
+
+        //     // Require Valid Root
+        //     self.require_valid_root(groth16_proof.public_inputs[0].clone()); 
+
+        //     groth16_proof.a.assert_on_curve(0);
+        //     groth16_proof.b.assert_on_curve(0);
+        //     groth16_proof.c.assert_on_curve(0);
+
+        //     let ic = ic.span();
+
+        //     let vk_x: G1Point = match ic.len() {
+        //         0 => panic!("Malformed VK"),
+        //         1 => *ic.at(0),
+        //         _ => {
+        //             // Start serialization with the hint array directly to avoid copying it.
+        //             let mut msm_calldata: Array<felt252> = msm_hint;
+        //             // Add the points from VK and public inputs to the proof.
+        //             Serde::serialize(@ic.slice(1, N_PUBLIC_INPUTS), ref msm_calldata);
+        //             Serde::serialize(@groth16_proof.public_inputs, ref msm_calldata);
+        //             // Complete with the curve indentifier (0 for BN254):
+        //             msm_calldata.append(0);
+
+        //             // Call the multi scalar multiplication endpoint on the Garaga ECIP ops contract
+        //             // to obtain vk_x.
+        //             let mut _vx_x_serialized = core::starknet::syscalls::library_call_syscall(
+        //                 ECIP_OPS_CLASS_HASH.try_into().unwrap(),
+        //                 selector!("msm_g1"),
+        //                 msm_calldata.span()
+        //             )
+        //                 .unwrap_syscall();
+
+        //             ec_safe_add(
+        //                 Serde::<G1Point>::deserialize(ref _vx_x_serialized).unwrap(), *ic.at(0), 0
+        //             )
+        //         }
+        //     };
+
+        //     // Perform the pairing check.
+        //     assert(multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result(
+        //         G1G2Pair { p: vk_x, q: vk.gamma_g2 },
+        //         G1G2Pair { p: groth16_proof.c, q: vk.delta_g2 },
+        //         G1G2Pair { p: groth16_proof.a.negate(0), q: groth16_proof.b },
+        //         vk.alpha_beta_miller_loop_result,
+        //         precomputed_lines.span(),
+        //         mpcheck_hint,
+        //         small_Q
+        //     ) == true, 'Verification Failed');
+    
     }
     
     // Internal Functions

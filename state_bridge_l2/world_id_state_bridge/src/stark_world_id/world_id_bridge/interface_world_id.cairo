@@ -23,8 +23,8 @@
 ///     }
 ///     The public inputs are in order:
 ///     * 'root' - The root of the Merkle tree
-///     * 'signalHash' - A keccak256 hash of the Semaphore signal
 ///     * 'nullifierHash' - The nullifier hash
+///     * 'signalHash' - A keccak256 hash of the Semaphore signal
 ///     * 'externalNullifierHash' - A keccak256 hash of the external nullifier
 /// 
 /// * 'mpcheck_hint' - The check hint for BN254
@@ -34,10 +34,17 @@
 /// # Returns
 /// 
 /// Either panics or succeeds on verification
+// #[starknet::interface]
+// pub trait IWorldID<TContractState> {
+//     fn verify_proof(
+//         self: @TContractState,
+//         full_proof_with_hints: Span<felt252>,
+//     );
+// }
 #[starknet::interface]
-pub trait IWorldID<TContractState> {
-    fn verify_proof(
+pub trait IGroth16VerifierBN254<TContractState> {
+    fn verify_groth16_proof_bn254(
         self: @TContractState,
         full_proof_with_hints: Span<felt252>,
-    );
+    ) -> Option<Span<u256>>;
 }
