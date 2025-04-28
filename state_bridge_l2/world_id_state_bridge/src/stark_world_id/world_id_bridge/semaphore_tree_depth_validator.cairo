@@ -1,13 +1,13 @@
-/// SemaphoreTreeDepthValidator 
-/// 
+/// SemaphoreTreeDepthValidator
+///
 /// Checks if the provided `treeDepth` is among supported depths.
 ///
 /// # Arguments
-/// 
+///
 /// * 'treeDepth' - The tree depth to validate.
-/// 
+///
 /// # Returns
-/// 
+///
 /// Returns `true` if `treeDepth` is between 16 and 32
 #[external(v0)]
 pub fn validate(tree_depth: u8) -> bool {
@@ -34,8 +34,8 @@ mod tests {
         // invalid depths
         let invalid_min_depth = 15;
         assert!(!validate(invalid_min_depth));
-        
-        let invalid_max_depth = 33; 
+
+        let invalid_max_depth = 33;
         assert!(!validate(invalid_max_depth));
     }
 }

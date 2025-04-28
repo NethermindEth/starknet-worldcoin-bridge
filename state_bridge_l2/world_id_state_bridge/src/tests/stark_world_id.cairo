@@ -1,22 +1,23 @@
-mod world_id_bridge; 
+mod world_id_bridge;
 
 /// # Notice
 ///
-/// These tests use the L1 handler functions as though they are external, in production, other contracts or EOAs 
-/// should not be able to call the L1 handlers. Only the starknet sequencer should be able to call.  
+/// These tests use the L1 handler functions as though they are external, in production, other
+/// contracts or EOAs should not be able to call the L1 handlers. Only the starknet sequencer should
+/// be able to call.
 
 #[cfg(test)]
 mod tests {
-    use starknet::{ContractAddress, EthAddress};
     use snforge_std::cheatcodes::contract_class::ContractClass;
-    use snforge_std::{declare, ContractClassTrait, DeclareResult};
-    use world_id_state_bridge::stark_world_id::interface_stark_world_id::IStarkWorldIDSafeDispatcher;
+    use snforge_std::{ContractClassTrait, DeclareResult, declare};
+    use starknet::{ContractAddress, EthAddress};
     use world_id_state_bridge::stark_world_id::StarkWorldID;
+    use world_id_state_bridge::stark_world_id::interface_stark_world_id::IStarkWorldIDSafeDispatcher;
 
-    const TEST_ADDRESS: felt252 = 111; 
-    const INVALID_TEST_ADDRESS: felt252 = 222; 
+    const TEST_ADDRESS: felt252 = 111;
+    const INVALID_TEST_ADDRESS: felt252 = 222;
     const VALID_ROOT_DEPTH: felt252 = 20;
-    const INVALID_ROOT_DEPTH: felt252 = 10; 
+    const INVALID_ROOT_DEPTH: felt252 = 10;
 
     fn setup_world_id_ext() -> (ContractAddress, IStarkWorldIDSafeDispatcher) {
         let contract: ContractClass = match declare("StarkWorldID").unwrap() {
@@ -26,12 +27,12 @@ mod tests {
         let mut args = ArrayTrait::new();
 
         args.append(TEST_ADDRESS);
-        args.append(VALID_ROOT_DEPTH); 
+        args.append(VALID_ROOT_DEPTH);
 
         let contract_address = contract.precalculate_address(@args);
 
         contract.deploy(@args).unwrap();
-        let dispatcher = IStarkWorldIDSafeDispatcher {contract_address};
+        let dispatcher = IStarkWorldIDSafeDispatcher { contract_address };
         (contract_address, dispatcher)
     }
 
@@ -41,19 +42,19 @@ mod tests {
         let contract: ContractClass = match declare("StarkWorldID").unwrap() {
             DeclareResult::Success(class_contract) => class_contract,
             DeclareResult::AlreadyDeclared(class_contract) => class_contract,
-        };        
+        };
         let mut args = ArrayTrait::new();
 
         args.append(TEST_ADDRESS);
-        args.append(INVALID_ROOT_DEPTH); 
-        contract.deploy(@args).unwrap();        
+        args.append(INVALID_ROOT_DEPTH);
+        contract.deploy(@args).unwrap();
     }
-    
+
     #[test]
     fn test_only_owner_receive_root() {
         // Setup
-        let mut stark_world_id_state = StarkWorldID::contract_state_for_testing(); 
-        let owner: EthAddress = TEST_ADDRESS.try_into().unwrap(); 
+        let mut stark_world_id_state = StarkWorldID::contract_state_for_testing();
+        let owner: EthAddress = TEST_ADDRESS.try_into().unwrap();
 
         // Create temp state
         StarkWorldID::constructor(ref stark_world_id_state, owner, 30);
@@ -67,9 +68,9 @@ mod tests {
     #[test]
     fn test_invalid_only_owner_receive_root() {
         // setup
-        let mut stark_world_id_state = StarkWorldID::contract_state_for_testing(); 
-        let owner: EthAddress = TEST_ADDRESS.try_into().unwrap(); 
-        let invalid_caller: EthAddress = INVALID_TEST_ADDRESS.try_into().unwrap(); 
+        let mut stark_world_id_state = StarkWorldID::contract_state_for_testing();
+        let owner: EthAddress = TEST_ADDRESS.try_into().unwrap();
+        let invalid_caller: EthAddress = INVALID_TEST_ADDRESS.try_into().unwrap();
 
         // Create temp state
         StarkWorldID::constructor(ref stark_world_id_state, owner, 30);
