@@ -1,2 +1,2 @@
-mod stark_world_id;
 mod mocks;
+mod stark_world_id;

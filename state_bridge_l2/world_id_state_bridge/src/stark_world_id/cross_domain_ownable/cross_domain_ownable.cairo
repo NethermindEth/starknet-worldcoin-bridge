@@ -1,11 +1,11 @@
 #[starknet::component]
 pub mod CrossDomainOwnable {
-    use world_id_state_bridge::stark_world_id::cross_domain_ownable::interface_cross_domain_ownable;
     use starknet::EthAddress;
+    use world_id_state_bridge::stark_world_id::cross_domain_ownable::interface_cross_domain_ownable;
     const ZERO: felt252 = 0;
 
     #[storage]
-    struct Storage{
+    struct Storage {
         l1_owner: EthAddress,
     }
 
@@ -35,27 +35,35 @@ pub mod CrossDomainOwnable {
         previous_l1_owner: EthAddress,
         #[key]
         new_l1_owner: EthAddress,
-
     }
 
     #[generate_trait]
-    pub impl InternalImpl<TContractState, +HasComponent<TContractState>> of InternalTrait<TContractState> {
+    pub impl InternalImpl<
+        TContractState, +HasComponent<TContractState>,
+    > of InternalTrait<TContractState> {
         fn _initialize(ref self: ComponentState<TContractState>, owner: EthAddress) {
-            self.emit(NewL1Owner {previous_l1_owner: self.l1_owner.read(), new_l1_owner: owner});
-            self.l1_owner.write(owner); 
+            self.emit(NewL1Owner { previous_l1_owner: self.l1_owner.read(), new_l1_owner: owner });
+            self.l1_owner.write(owner);
         }
     }
 
-    pub impl CrossDomainOwnableImpl<TContractState, +HasComponent<TContractState>> of interface_cross_domain_ownable::ICrossDomainOwnable<ComponentState<TContractState>> {
-        fn transfer_ownership(ref self: ComponentState<TContractState>, from_address: felt252, new_owner: EthAddress){
+    pub impl CrossDomainOwnableImpl<
+        TContractState, +HasComponent<TContractState>,
+    > of interface_cross_domain_ownable::ICrossDomainOwnable<ComponentState<TContractState>> {
+        fn transfer_ownership(
+            ref self: ComponentState<TContractState>, from_address: felt252, new_owner: EthAddress,
+        ) {
             assert(new_owner.into() != ZERO, Errors::ZERO_ADDRESS_OWNER);
-            self.only_cross_domain_owner(from_address); 
-            
-            self.emit(NewL1Owner {previous_l1_owner: self.l1_owner.read(), new_l1_owner: new_owner});
+            self.only_cross_domain_owner(from_address);
+
+            self
+                .emit(
+                    NewL1Owner { previous_l1_owner: self.l1_owner.read(), new_l1_owner: new_owner },
+                );
             self.l1_owner.write(new_owner);
         }
 
-        fn owner(self: @ComponentState<TContractState>) -> EthAddress{
+        fn owner(self: @ComponentState<TContractState>) -> EthAddress {
             self.l1_owner.read()
         }
 

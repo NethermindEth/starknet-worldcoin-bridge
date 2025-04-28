@@ -11,7 +11,7 @@ pub mod WorldIDBridgeMock {
     impl WorldIDImplVerify = WorldID::WorldIDImplVerify<ContractState>;
 
     // Internal Components
-    impl WorldIDInternalImpl = WorldID::InternalImpl<ContractState>; 
+    impl WorldIDInternalImpl = WorldID::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -27,6 +27,6 @@ pub mod WorldIDBridgeMock {
 
     #[constructor]
     fn constructor(ref self: ContractState, tree_depth: u8) {
-        self.world_id_storage._intialize(tree_depth); 
+        self.world_id_storage._intialize(tree_depth);
     }
 }
