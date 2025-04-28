@@ -143,7 +143,6 @@ pub mod WorldID {
 
             assert(root_timestamp != 0, Errors::NON_EXISTENT_ROOT);
 
-            // Check for underflow?
             assert(
                 (get_block_timestamp().into() - root_timestamp)
                     .into() <= self
