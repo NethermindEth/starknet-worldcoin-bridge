@@ -140,11 +140,17 @@ pub mod WorldID {
             }
 
             let root_timestamp: u256 = self.root_history.read(root).into();
+            let current_timestamp: u256 = get_block_timestamp().into();
 
             assert(root_timestamp != 0, Errors::NON_EXISTENT_ROOT);
 
             assert(
-                (get_block_timestamp().into() - root_timestamp)
+                current_timestamp > root_timestamp,
+                Errors::EXPIRED_ROOT
+            );
+
+            assert(
+                (current_timestamp - root_timestamp)
                     .into() <= self
                     .root_history_expiry
                     .read()
