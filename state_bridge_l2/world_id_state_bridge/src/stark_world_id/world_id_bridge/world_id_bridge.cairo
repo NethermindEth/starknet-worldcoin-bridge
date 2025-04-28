@@ -145,11 +145,6 @@ pub mod WorldID {
             assert(root_timestamp != 0, Errors::NON_EXISTENT_ROOT);
 
             assert(
-                current_timestamp > root_timestamp,
-                Errors::EXPIRED_ROOT
-            );
-
-            assert(
                 (current_timestamp - root_timestamp)
                     .into() <= self
                     .root_history_expiry
