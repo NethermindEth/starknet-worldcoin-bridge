@@ -19,7 +19,7 @@ async fn test_relay() -> eyre::Result<()> {
 
     // Option Setup
     let l1_state_bridge = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0".parse::<H160>()?;
-    let relaying_period = Duration::new(5, 0);
+    let relaying_period = Duration::new(60000, 0);
     let block_confirmations = 0;
     const DEFAULT_GAS: u32 = 1000000;
 
