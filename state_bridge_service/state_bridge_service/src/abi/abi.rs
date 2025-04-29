@@ -14,6 +14,4 @@ abigen!(
     r#"[
         function propagateRoot() external
     ]"#;
-
-
 );

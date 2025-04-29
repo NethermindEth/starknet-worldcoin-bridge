@@ -1,0 +1,24 @@
+[package]
+name = "state_bridge_service"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/mod.rs"
+
+[[bin]]
+name = "state_bridge_relay"
+path = "bin/relay.rs"
+
+[dependencies]
+starknet.workspace = true
+ethers.workspace = true
+eyre.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+ruint.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+dotenv.workspace = true

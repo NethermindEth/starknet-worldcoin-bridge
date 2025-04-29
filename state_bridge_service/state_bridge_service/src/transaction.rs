@@ -8,7 +8,7 @@ use ethers::types::{
 };
 use tracing::instrument;
 
-use super::error::TransactionError;
+use crate::error::error::TransactionError;
 
 //Signs and sends transaction, bumps gas if necessary
 #[instrument(skip(wallet_key, block_confirmations, middleware))]

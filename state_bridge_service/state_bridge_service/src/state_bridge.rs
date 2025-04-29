@@ -1,21 +1,16 @@
-pub mod abi;
-pub mod error;
-//pub mod service;
-pub mod transaction;
-
 use std::ops::Sub;
 use std::sync::Arc;
+
+use crate::abi;
+use crate::error::error::StateBridgeError;
+use crate::transaction;
 
 use ethers::providers::Middleware;
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::H160;
-use ruint::Uint;
-use tokio::select;
 use tokio::task::JoinHandle;
 use tokio::time::{Duration, Instant};
 use tracing::instrument;
-
-use self::error::StateBridgeError;
 
 //use crate::tree::Hash;
 
@@ -110,7 +105,7 @@ impl<M: Middleware> StateBridge<M> {
         l1_middleware: Arc<M>,
         value: u32,
     ) -> Result<(), StateBridgeError<M>> {
-        let calldata = abi::ISTATEBRIDGE_ABI
+        let calldata = abi::abi::ISTATEBRIDGE_ABI
             .function("propagateRoot")?
             .encode_input(&[])?;
 

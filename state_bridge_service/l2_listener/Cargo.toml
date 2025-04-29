@@ -1,0 +1,16 @@
+[package]
+name = "l2_listener"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "mod.rs"
+
+[dependencies]
+starknet.workspace = true
+eyre.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+state_bridge_service = { path = "../state_bridge_service" } 
