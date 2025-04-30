@@ -1,24 +1,30 @@
+use clap::{Parser, ValueEnum};
 use dotenv::dotenv;
 use ethers::prelude::*;
 use eyre::Result;
 use std::{sync::Arc, time::Duration};
 
-use state_bridge_service::state_bridge::StateBridge;
+use state_bridge_service::config::cli::Cli;
 use state_bridge_service::config::config::{AddressBook, EnvironmentConfig};
-
+use state_bridge_service::state_bridge::StateBridge;
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
     // Environment Variables
     dotenv().ok();
-    let http_local = std::env::var("HTTP_TESTNET")?;
-    let test_private_key = std::env::var("TEST_PRIVATE_KEY")?;
 
     let event_name = "TreeChanged(uint256,uint8,uint256)";
+
+    let test_private_key = std::env::var("TEST_PRIVATE_KEY")?;
 
     // Interfacing Setup
     let test_wallet: LocalWallet = test_private_key
         .parse::<LocalWallet>()?
         .with_chain_id(11155111 as u64);
+
+    let http_local = std::env::var("HTTP_TESTNET")?;
+
     let provider: Arc<Provider<Http>> = Arc::new(Provider::<Http>::connect(&http_local).await);
 
     // Option Setup
