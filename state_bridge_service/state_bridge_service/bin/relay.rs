@@ -2,77 +2,84 @@ use clap::{Parser, ValueEnum};
 use dotenv::dotenv;
 use ethers::prelude::*;
 use eyre::Result;
+use state_bridge_service::fee_estimator::get_fee;
 use std::{sync::Arc, time::Duration};
 
 use state_bridge_service::config::cli::Cli;
-use state_bridge_service::config::config::{AddressBook, EnvironmentConfig};
+use state_bridge_service::config::config::{BridgeAddressBook, EnvironmentConfig, WorldAddressBook};
 use state_bridge_service::state_bridge::StateBridge;
+use state_bridge_service::config::config::Config;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+    let config = Config::new_from_cli(&cli).await?;
 
-    // Environment Variables
-    dotenv().ok();
+    let bridge_addresses = BridgeAddressBook::default(); 
 
-    let event_name = "TreeChanged(uint256,uint8,uint256)";
+    let fee = get_fee(config, bridge_addresses).await?;
 
-    let test_private_key = std::env::var("TEST_PRIVATE_KEY")?;
+    println!("fee: {:?}", fee); 
+    
+    // let event_name = "TreeChanged(uint256,uint8,uint256)";
 
-    // Interfacing Setup
-    let test_wallet: LocalWallet = test_private_key
-        .parse::<LocalWallet>()?
-        .with_chain_id(11155111 as u64);
+    // // let test_private_key = std::env::var("TEST_PRIVATE_KEY")?;
 
-    let http_local = std::env::var("HTTP_TESTNET")?;
+    // // Interfacing Setup
+    // // let test_wallet: LocalWallet = test_private_key
+    // //     .parse::<LocalWallet>()?
+    // //     .with_chain_id(11155111 as u64);
 
-    let provider: Arc<Provider<Http>> = Arc::new(Provider::<Http>::connect(&http_local).await);
+    // let http_local = std::env::var("HTTP_TESTNET")?;
 
-    // Option Setup
-    let worldid_contract = "0xb2EaD588f14e69266d1b87936b75325181377076 ".parse::<H160>()?;
-    let l1_state_bridge = "0x8dD81147685Dc88B6531cCE6b1a71221Be520d62".parse::<H160>()?;
-    let relaying_period = Duration::new(60, 0);
-    let block_confirmations = 0;
-    const DEFAULT_GAS: u32 = 1000000;
+    // let provider: Arc<Provider<Http>> = Arc::new(Provider::<Http>::connect(&http_local).await);
 
-    // Filter Events
-    let filter = Filter::new().address(worldid_contract).event(event_name);
+    // // Option Setup
+    // let worldid_contract = "0xb2EaD588f14e69266d1b87936b75325181377076 ".parse::<H160>()?;
+    // let l1_state_bridge = "0x8dD81147685Dc88B6531cCE6b1a71221Be520d62".parse::<H160>()?;
+    // let relaying_period = Duration::new(43200, 0);
+    // let block_confirmations = 0;
+    // const DEFAULT_GAS: u32 = 1000000;
 
-    // New State Bridge Service
-    let state_bridge = StateBridge::new(
-        l1_state_bridge,
-        test_wallet.clone(),
-        provider.clone(),
-        relaying_period,
-        block_confirmations,
-    )?;
+    // // Filter Events
+    // let filter = Filter::new().address(worldid_contract).event(event_name);
 
-    // Event based root propogation
-    let mut stream = provider.watch(&filter).await?.stream();
+    // // New State Bridge Service
+    // let state_bridge = StateBridge::new(
+    //     l1_state_bridge,
+    //     test_wallet.clone(),
+    //     provider.clone(),
+    //     relaying_period,
+    //     block_confirmations,
+    // )?;
 
-    while let log = stream.next().await {
-        match log {
-            Some(log) => {
-                let res = StateBridge::propagate_root(
-                    l1_state_bridge,
-                    &test_wallet,
-                    block_confirmations,
-                    provider.clone(),
-                    DEFAULT_GAS,
-                )
-                .await;
+    // // Event based root propogation
+    // let mut stream = provider.watch(&filter).await?.stream();
 
-                match res {
-                    Ok(()) => println!("ok"),
-                    Err(e) => println!("error: {:?}", e),
-                }
+    // while let log = stream.next().await {
+    //     match log {
+    //         Some(log) => {
+    //             let res = StateBridge::propagate_root(
+    //                 l1_state_bridge,
+    //                 &test_wallet,
+    //                 block_confirmations,
+    //                 provider.clone(),
+    //                 DEFAULT_GAS,
+    //             )
+    //             .await;
 
-                println!("Event detected: {:?}", log);
-            }
-            None => {
-                eprintln!("Error listening to events");
-            }
-        }
-    }
+    //             match res {
+    //                 Ok(()) => println!("ok"),
+    //                 Err(e) => println!("error: {:?}", e),
+    //             }
+
+    //             println!("Event detected: {:?}", log);
+    //         }
+    //         None => {
+    //             eprintln!("Error listening to events");
+    //         }
+    //     }
+    // }
 
     // Single call rootPropogate()
     // let res = StateBridge::propagate_root(

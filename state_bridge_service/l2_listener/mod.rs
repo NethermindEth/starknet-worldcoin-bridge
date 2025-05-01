@@ -1,4 +1,4 @@
-use starknet::core::types::{BlockId, EventFilter, FieldElement};
+use starknet::core::types::{BlockId, EventFilter, Felt};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, Url};
 pub struct EventListener {
@@ -16,8 +16,8 @@ impl EventListener {
         &self,
         from_block: Option<BlockId>,
         to_block: Option<BlockId>,
-        address: Option<FieldElement>,
-        keys: Option<Vec<Vec<FieldElement>>>,
+        address: Option<Felt>,
+        keys: Option<Vec<Vec<Felt>>>,
     ) -> eyre::Result<starknet::core::types::EventsPage> {
         let event_filter = EventFilter {
             from_block,
