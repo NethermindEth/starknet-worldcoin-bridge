@@ -2,12 +2,16 @@ use std::ops::Sub;
 use std::sync::Arc;
 
 use crate::abi;
+use crate::config::config::Config;
 use crate::error::error::StateBridgeError;
 use crate::transaction;
 
 use ethers::providers::Middleware;
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::H160;
+use ethers::providers::JsonRpcClient as EthersJsonRpcClient;
+use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
+
 use tokio::task::JoinHandle;
 use tokio::time::{Duration, Instant};
 use tracing::instrument;
@@ -52,57 +56,65 @@ impl<M: Middleware> StateBridge<M> {
         })
     }
 
-    /// Spawns a `StateBridge` task to listen for `TreeChanged` events from `WorldRoot` and propagate new roots.
-    #[instrument(skip(self))]
-    pub fn spawn(&self, value: u32) -> JoinHandle<Result<(), StateBridgeError<M>>> {
-        let l1_state_bridge = self.l1_state_bridge;
-        let relaying_period = self.relaying_period;
-        let block_confirmations = self.block_confirmations;
-        let wallet = self.wallet.clone();
-        let l1_middleware = self.l1_middleware.clone();
-
-        tracing::info!(
-            ?l1_state_bridge,
-            ?relaying_period,
-            ?block_confirmations,
-            "Spawning bridge"
-        );
-
-        tokio::spawn(async move {
-            let mut last_propagation = Instant::now().sub(relaying_period);
-
-            loop {
-                // Sleep
-                tokio::time::sleep(relaying_period).await;
-                tracing::info!(?l1_state_bridge, "Sleep time elapsed");
-
-                let time_since_last_propagation = Instant::now() - last_propagation;
-
-                if time_since_last_propagation >= relaying_period {
-                    tracing::info!(?l1_state_bridge, "Relaying period elapsed");
-
-                    tracing::info!(?l1_state_bridge, "Propagating root");
-
-                    Self::propagate_root(
-                        l1_state_bridge,
-                        &wallet,
-                        block_confirmations,
-                        l1_middleware.clone(),
-                        value,
-                    )
-                    .await?;
-
-                    last_propagation = Instant::now();
-                }
-            }
+    pub async fn from_config<T> (
+        config: Config<M, T>,
+        relaying_period: Duration,
+        block_confirmations: usize,
+    ) -> Result<Self, StateBridgeError<M>> 
+    where
+        T: StarknetJsonRpcTransport + Send + Sync + 'static,
+    {
+        Ok(Self {
+            l1_state_bridge: config.bridge_address_book.bridge_l1,
+            wallet: config.owner,
+            l1_middleware: config.l1_provider,
+            relaying_period,
+            block_confirmations,
         })
     }
+    // /// Spawns a `StateBridge` task to listen for `TreeChanged` events from `WorldRoot` and propagate new roots.
+    // #[instrument(skip(self))]
+    // pub fn spawn(&self, value: u32) -> JoinHandle<Result<(), StateBridgeError<M>>> {
+    //     let l1_state_bridge = self.l1_state_bridge;
+    //     let relaying_period = self.relaying_period;
+    //     let block_confirmations = self.block_confirmations;
+    //     let wallet = self.wallet.clone();
+    //     let l1_middleware = self.l1_middleware.clone();
 
+    //     tracing::info!(
+    //         ?l1_state_bridge,
+    //         ?relaying_period,
+    //         ?block_confirmations,
+    //         "Spawning bridge"
+    //     );
+
+    //     tokio::spawn(async move {
+    //         let mut last_propagation = Instant::now().sub(relaying_period);
+
+    //         loop {
+    //             // Sleep
+    //             tokio::time::sleep(relaying_period).await;
+    //             tracing::info!(?l1_state_bridge, "Sleep time elapsed");
+
+    //             let time_since_last_propagation = Instant::now() - last_propagation;
+
+    //             if time_since_last_propagation >= relaying_period {
+    //                 tracing::info!(?l1_state_bridge, "Relaying period elapsed");
+
+    //                 tracing::info!(?l1_state_bridge, "Propagating root");
+
+    //                 self.propagate_root(
+    //                     value,
+    //                 )
+    //                 .await?;
+
+    //                 last_propagation = Instant::now();
+    //             }
+    //         }
+    //     })
+    // }
     pub async fn propagate_root(
-        l1_state_bridge: H160,
-        wallet: &LocalWallet,
-        block_confirmations: usize,
-        l1_middleware: Arc<M>,
+        &self,
         value: u32,
     ) -> Result<(), StateBridgeError<M>> {
         let calldata = abi::abi::ISTATEBRIDGE_ABI
@@ -111,15 +123,15 @@ impl<M: Middleware> StateBridge<M> {
 
         let tx = transaction::fill_and_simulate_eip1559_transaction(
             calldata.into(),
-            l1_state_bridge,
-            wallet.address(),
-            wallet.chain_id(),
-            l1_middleware.clone(),
+            self.l1_state_bridge,
+            self.wallet.address(),
+            self.wallet.chain_id(),
+            self.l1_middleware.clone(),
             value,
         )
         .await?;
 
-        transaction::sign_and_send_transaction(tx, wallet, block_confirmations, l1_middleware)
+        transaction::sign_and_send_transaction(tx, &self.wallet, self.block_confirmations, self.l1_middleware.clone())
             .await?;
 
         Ok(())

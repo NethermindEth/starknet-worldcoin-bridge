@@ -7,7 +7,7 @@ use crate::config::constants::{
 use std::sync::Arc;
 
 use dotenv::dotenv;
-use ethers::providers::{JsonRpcClient as EthersJsonRpcClient, Provider as EthersProvider, Ws};
+use ethers::providers::{JsonRpcClient as EthersJsonRpcClient, Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::{Address, H160};
 use starknet::core::types::{BlockId, BlockTag, EthAddress, Felt, MsgFromL1};
@@ -19,10 +19,10 @@ use starknet::providers::{
 #[derive(Clone, Debug)]
 pub struct Config<P, T>
 where
-    P: EthersJsonRpcClient + 'static,
+    P: Middleware + 'static,
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
 {
-    pub l1_provider: Arc<EthersProvider<P>>,
+    pub l1_provider: Arc<P>,
     pub l2_provider: Arc<StarknetJsonRPClient<T>>,
     pub owner: LocalWallet,
     pub world_address_book: WorldAddressBook,
@@ -82,7 +82,7 @@ impl WorldAddressBook {
     }
 }
 
-impl Config<Ws, HttpTransport> {
+impl Config<EthersProvider<Ws>, HttpTransport> {
     pub async fn new_from_cli(cli: &Cli) -> Result<Self, eyre::Report> {
         dotenv().ok();
 
@@ -130,7 +130,7 @@ impl Config<Ws, HttpTransport> {
 
 impl<P, T> Config<P, T>
 where
-    P: EthersJsonRpcClient + 'static,
+    P: Middleware + 'static,
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
 {
     pub async fn get_fee(&self) -> eyre::Result<Felt> {
