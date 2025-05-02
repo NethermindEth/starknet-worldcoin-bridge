@@ -2,12 +2,9 @@ use clap::{Parser, ValueEnum};
 use dotenv::dotenv;
 use ethers::prelude::*;
 use eyre::Result;
-use state_bridge_service::fee_estimator::get_fee;
 use std::{sync::Arc, time::Duration};
 
 use state_bridge_service::config::cli::Cli;
-use state_bridge_service::config::config::{BridgeAddressBook, EnvironmentConfig, WorldAddressBook};
-use state_bridge_service::state_bridge::StateBridge;
 use state_bridge_service::config::config::Config;
 
 #[tokio::main]
@@ -15,12 +12,10 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = Config::new_from_cli(&cli).await?;
 
-    let bridge_addresses = BridgeAddressBook::default(); 
+    let fee = config.get_fee().await?;
 
-    let fee = get_fee(config, bridge_addresses).await?;
+    println!("fee: {:?}", fee);
 
-    println!("fee: {:?}", fee); 
-    
     // let event_name = "TreeChanged(uint256,uint8,uint256)";
 
     // // let test_private_key = std::env::var("TEST_PRIVATE_KEY")?;
