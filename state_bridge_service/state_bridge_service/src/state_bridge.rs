@@ -4,11 +4,11 @@ use std::sync::Arc;
 use crate::abi;
 use crate::config::config::Config;
 use crate::error::error::StateBridgeError;
-use crate::transaction;
+use crate::transaction::{self, check_gas_limit};
 
 use ethers::providers::Middleware;
 use ethers::signers::{LocalWallet, Signer};
-use ethers::types::H160;
+use ethers::types::{H160, U256};
 use ethers::providers::JsonRpcClient as EthersJsonRpcClient;
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
 
@@ -56,7 +56,7 @@ impl<M: Middleware> StateBridge<M> {
         })
     }
 
-    pub async fn from_config<T> (
+    pub fn from_config<T> (
         config: Config<M, T>,
         relaying_period: Duration,
         block_confirmations: usize,
@@ -115,7 +115,7 @@ impl<M: Middleware> StateBridge<M> {
     // }
     pub async fn propagate_root(
         &self,
-        value: u32,
+        value: U256,
     ) -> Result<(), StateBridgeError<M>> {
         let calldata = abi::abi::ISTATEBRIDGE_ABI
             .function("propagateRoot")?
@@ -131,8 +131,15 @@ impl<M: Middleware> StateBridge<M> {
         )
         .await?;
 
-        transaction::sign_and_send_transaction(tx, &self.wallet, self.block_confirmations, self.l1_middleware.clone())
+        let set_gas_limit = *tx.gas().unwrap();
+        if check_gas_limit(set_gas_limit) {
+            transaction::sign_and_send_transaction(tx, &self.wallet, self.block_confirmations, self.l1_middleware.clone())
             .await?;
+        }
+        else {
+            tracing::info!("Default gas limit exceeded");
+            return Err(StateBridgeError::GasLimitError(set_gas_limit));
+        }
 
         Ok(())
     }

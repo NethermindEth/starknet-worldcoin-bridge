@@ -23,3 +23,4 @@ serde_json.workspace = true
 thiserror.workspace = true
 dotenv.workspace = true
 clap.workspace = true
+once_cell.workspace = true

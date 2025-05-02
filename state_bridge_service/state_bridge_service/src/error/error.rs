@@ -1,7 +1,7 @@
 use ethers::prelude::{AbiError, ContractError};
 use ethers::providers::{Middleware, ProviderError};
 use ethers::signers::WalletError;
-use ethers::types::H256;
+use ethers::types::{H256, U256};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -21,6 +21,8 @@ where
     EthABIError(#[from] ethers::abi::Error),
     #[error("Transaction error")]
     TransactionError(#[from] TransactionError<M>),
+    #[error("Gas Limit Exceeded error")]
+    GasLimitError(U256),
 }
 
 #[derive(Error, Debug)]

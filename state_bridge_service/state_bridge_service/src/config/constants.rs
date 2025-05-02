@@ -24,7 +24,7 @@ pub mod defaults {
 
     pub const RELAYING_PERIOD: Duration = Duration::new(43200, 0); // 12 hours
     pub const BLOCK_CONFIRMATIONS: usize = 0;
-    pub const DEFAULT_GAS: u32 = 1000000;
+    pub const DEFAULT_GAS: u32 = 300000;
 
     pub const HANDLE_RECEIVE_ROOT_SELECTOR: &str =
         "0x01ec02fa6378eca6ce8f976f7e74ad1a2241692571db908bc34270508d025cf4";
