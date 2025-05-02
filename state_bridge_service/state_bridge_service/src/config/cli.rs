@@ -17,6 +17,6 @@ pub enum Network {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
 pub enum Fee {
     Estimate,
-    Default, 
+    Default,
     NoFee,
 }

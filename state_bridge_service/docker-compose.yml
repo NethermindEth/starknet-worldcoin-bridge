@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  state-bridge-relay:
+    build:
+      context: ./state_bridge_service
+      dockerfile: Dockerfile
+    container_name: state-bridge-relay
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+    # If you need to pass environment variables, uncomment and modify the following:
+    # environment:
+    #   - RUST_LOG=info
+    # If you need to pass command line arguments, add them here: 

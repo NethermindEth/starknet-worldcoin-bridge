@@ -1,15 +1,13 @@
-use std::ops::Sub;
-use std::sync::Arc;
-
 use crate::abi;
 use crate::config::config::Config;
 use crate::error::error::StateBridgeError;
 use crate::transaction::{self, check_gas_limit};
 
-use ethers::providers::Middleware;
+use std::sync::Arc;
+
+use ethers::providers::{Middleware, StreamExt};
 use ethers::signers::{LocalWallet, Signer};
-use ethers::types::{H160, U256};
-use ethers::providers::JsonRpcClient as EthersJsonRpcClient;
+use ethers::types::{Filter, H160, U256};
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
 
 use tokio::task::JoinHandle;
@@ -56,11 +54,11 @@ impl<M: Middleware> StateBridge<M> {
         })
     }
 
-    pub fn from_config<T> (
+    pub fn from_config<T>(
         config: Config<M, T>,
         relaying_period: Duration,
         block_confirmations: usize,
-    ) -> Result<Self, StateBridgeError<M>> 
+    ) -> Result<Self, StateBridgeError<M>>
     where
         T: StarknetJsonRpcTransport + Send + Sync + 'static,
     {
@@ -71,6 +69,71 @@ impl<M: Middleware> StateBridge<M> {
             relaying_period,
             block_confirmations,
         })
+    }
+
+    // todo: separate into tokio tasks
+    pub async fn watch_and_execute<T>(&self, config: Config<M, T>) -> eyre::Result<()>
+    where
+        T: StarknetJsonRpcTransport + Send + Sync + 'static,
+    {
+        let fee = config.get_fee().await?;
+
+        // Filter Events
+        let event_name = "TreeChanged(uint256,uint8,uint256)";
+        let filter = Filter::new()
+            .address(config.world_address_book.worldid_router)
+            .event(event_name);
+
+        // New State Bridge Service
+        let state_bridge =
+            StateBridge::from_config(config, self.relaying_period, self.block_confirmations)?;
+
+        // Event based root propogation
+        let mut stream = self.l1_middleware.watch(&filter).await?.stream();
+
+        while let log = stream.next().await {
+            match log {
+                Some(log) => {
+                    let res = state_bridge.propagate_root(fee.to_bytes_be().into()).await;
+
+                    match res {
+                        Ok(()) => println!("ok"),
+                        Err(e) => println!("error: {:?}", e),
+                    }
+
+                    println!("Event detected: {:?}", log);
+                }
+                None => {
+                    eprintln!("Error listening to events");
+                }
+            }
+        }
+
+        // Single call rootPropogate()
+        // let res = StateBridge::propagate_root(
+        //     l1_state_bridge,
+        //     &test_wallet,
+        //     block_confirmations,
+        //     provider.clone(),
+        //     DEFAULT_GAS,
+        // )
+        // .await;
+
+        // match res {
+        //     Ok(()) => println!("ok"),
+        //     Err(e) => println!("error: {:?}", e),
+        // }
+
+        // Interval Based Root Propagation
+        // let join_handle = state_bridge.spawn(DEFAULT_GAS);
+
+        // match join_handle.await {
+        //     Ok(Ok(result)) => println!("Task result: {:?}", result),
+        //     Ok(Err(e)) => eprintln!("Task error: {}", e),
+        //     Err(e) => eprintln!("Join error: {:?}", e),
+        // }
+
+        Ok(())
     }
     // /// Spawns a `StateBridge` task to listen for `TreeChanged` events from `WorldRoot` and propagate new roots.
     // #[instrument(skip(self))]
@@ -113,10 +176,7 @@ impl<M: Middleware> StateBridge<M> {
     //         }
     //     })
     // }
-    pub async fn propagate_root(
-        &self,
-        value: U256,
-    ) -> Result<(), StateBridgeError<M>> {
+    pub async fn propagate_root(&self, value: U256) -> Result<(), StateBridgeError<M>> {
         let calldata = abi::abi::ISTATEBRIDGE_ABI
             .function("propagateRoot")?
             .encode_input(&[])?;
@@ -133,10 +193,14 @@ impl<M: Middleware> StateBridge<M> {
 
         let set_gas_limit = *tx.gas().unwrap();
         if check_gas_limit(set_gas_limit) {
-            transaction::sign_and_send_transaction(tx, &self.wallet, self.block_confirmations, self.l1_middleware.clone())
+            transaction::sign_and_send_transaction(
+                tx,
+                &self.wallet,
+                self.block_confirmations,
+                self.l1_middleware.clone(),
+            )
             .await?;
-        }
-        else {
+        } else {
             tracing::info!("Default gas limit exceeded");
             return Err(StateBridgeError::GasLimitError(set_gas_limit));
         }

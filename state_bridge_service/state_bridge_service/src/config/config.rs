@@ -7,7 +7,7 @@ use crate::config::constants::{
 use std::sync::Arc;
 
 use dotenv::dotenv;
-use ethers::providers::{JsonRpcClient as EthersJsonRpcClient, Middleware, Provider as EthersProvider, Ws};
+use ethers::providers::{Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::{Address, H160};
 use starknet::core::types::{BlockId, BlockTag, EthAddress, Felt, MsgFromL1};
@@ -157,7 +157,6 @@ where
             entry_point_selector,
             payload,
         })
-        // pub payload: Vec<Felt>,
     }
 
     pub async fn get_root(&self) -> eyre::Result<Vec<Felt>> {

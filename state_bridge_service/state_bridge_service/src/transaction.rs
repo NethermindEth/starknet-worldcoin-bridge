@@ -9,12 +9,10 @@ use ethers::types::transaction::eip2718::TypedTransaction;
 use ethers::types::{
     BlockId, BlockNumber, Bytes, Eip1559TransactionRequest, TransactionReceipt, H160, U256,
 };
-use tracing::instrument;
 use once_cell::sync::Lazy;
+use tracing::instrument;
 
-pub static DEFAULT_GAS_LIMIT: Lazy<U256> = Lazy::new(|| {
-    U256::from(DEFAULT_GAS)
-});
+pub static DEFAULT_GAS_LIMIT: Lazy<U256> = Lazy::new(|| U256::from(DEFAULT_GAS));
 
 //Signs and sends transaction, bumps gas if necessary
 #[instrument(skip(wallet_key, block_confirmations, middleware))]
@@ -98,7 +96,7 @@ pub async fn fill_and_simulate_eip1559_transaction<M: Middleware>(
         .map_err(TransactionError::MiddlewareError)?;
 
     tracing::info!("Successfully simulated tx");
-    
+
     Ok(tx)
 }
 
@@ -134,4 +132,4 @@ pub fn raw_signed_transaction(
 
 pub fn check_gas_limit(set_gas: U256) -> bool {
     set_gas <= *DEFAULT_GAS_LIMIT
-} 
+}
