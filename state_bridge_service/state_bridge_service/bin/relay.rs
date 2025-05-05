@@ -18,17 +18,19 @@ async fn main() -> Result<()> {
 
     fmt()
         .with_env_filter(env_filter)
-        .with_target(false) 
-        .with_level(true) 
-        .init(); 
+        .with_target(false)
+        .with_level(true)
+        .init();
 
     let cli = Cli::parse();
     let config = Config::new_from_cli(&cli).await?;
 
+    let state_bridge = Arc::new(StateBridge::from_config(
+        config,
+        RELAYING_PERIOD,
+        BLOCK_CONFIRMATIONS,
+    )?);
     
-    let state_bridge =
-        Arc::new(StateBridge::from_config(config.clone(), RELAYING_PERIOD, BLOCK_CONFIRMATIONS)?); //todo: fix clone
-    // state_bridge.watch_and_execute(config).await?;
-    state_bridge.start(config).await?;
+    state_bridge.start().await?;
     Ok(())
 }

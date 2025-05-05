@@ -9,7 +9,7 @@ use std::sync::Arc;
 use dotenv::dotenv;
 use ethers::providers::{Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
-use ethers::types::{Address, H160};
+use ethers::types::{Address, H160, U256};
 use starknet::core::types::{BlockId, BlockTag, EthAddress, FeeEstimate, Felt, MsgFromL1};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport as StarknetJsonRpcTransport};
 use starknet::providers::{
@@ -132,9 +132,9 @@ impl<M, T> Config<M, T>
 where
     M: Middleware + 'static,
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
-{   
+{
     pub fn get_world_router(&self) -> Address {
-        self.bridge_address_book.bridge_l1
+        self.world_address_book.worldid_router
     }
 
     pub fn get_wallet(&self) -> &LocalWallet {
@@ -148,19 +148,29 @@ where
     pub fn get_l2_provider(&self) -> Arc<StarknetJsonRPClient<T>> {
         self.l2_provider.clone()
     }
-    
 
-    pub async fn get_fee(&self) -> eyre::Result<FeeEstimate> {
-        let l1_msg = self.build_msg_from_l1().await?;
+    pub async fn estimate_fee(&self, root: Vec<Felt>) -> eyre::Result<FeeEstimate> {
+        let l1_msg = self.build_msg_from_l1(root).await?;
         let fee = self
             .l2_provider
             .estimate_message_fee(l1_msg, BlockId::Tag(BlockTag::Latest))
             .await?;
-        
+
         Ok(fee)
     }
 
-    pub async fn build_msg_from_l1(&self) -> eyre::Result<MsgFromL1> {
+    pub async fn estimate_simulated_fee(&self) -> eyre::Result<FeeEstimate> {
+        let dummy_fee = self.get_dummy_root().await?;
+        let l1_msg = self.build_msg_from_l1(dummy_fee).await?;
+        let fee = self
+            .l2_provider
+            .estimate_message_fee(l1_msg, BlockId::Tag(BlockTag::Latest))
+            .await?;
+
+        Ok(fee)
+    }
+
+    pub async fn build_msg_from_l1(&self, root: Vec<Felt>) -> eyre::Result<MsgFromL1> {
         let from_address =
             EthAddress::from_bytes(*self.bridge_address_book.bridge_l1.as_fixed_bytes());
         let to_address = self.bridge_address_book.bridge_l2;
@@ -171,7 +181,7 @@ where
             from_address,
             to_address,
             entry_point_selector,
-            payload,
+            payload: root,
         })
     }
 
@@ -183,10 +193,9 @@ where
 
         // Parse payload - uint256 splits into two felt252
         let root = identity_manager_contract.latest_root().await?;
-        let latest_root_0 = root.low_u128().into();
-        let latest_root_1 = (root >> 128).as_u128().into();
+        let root = into_felt(root)?;
 
-        Ok(vec![latest_root_0, latest_root_1])
+        Ok(root)
     }
 
     // For estimating fees when latest root is already propagated.
@@ -196,4 +205,11 @@ where
 
         Ok(vec![dummy_root_0, dummy_root_1])
     }
+}
+
+pub fn into_felt(root: U256) -> eyre::Result<Vec<Felt>> {
+    let latest_root_0 = root.low_u128().into();
+    let latest_root_1 = (root >> 128).as_u128().into();
+
+    Ok(vec![latest_root_0, latest_root_1])
 }
