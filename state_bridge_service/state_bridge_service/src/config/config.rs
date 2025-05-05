@@ -10,19 +10,19 @@ use dotenv::dotenv;
 use ethers::providers::{Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::{Address, H160};
-use starknet::core::types::{BlockId, BlockTag, EthAddress, Felt, MsgFromL1};
+use starknet::core::types::{BlockId, BlockTag, EthAddress, FeeEstimate, Felt, MsgFromL1};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport as StarknetJsonRpcTransport};
 use starknet::providers::{
     JsonRpcClient as StarknetJsonRPClient, Provider as StarknetProvider, Url,
 };
 
 #[derive(Clone, Debug)]
-pub struct Config<P, T>
+pub struct Config<M, T>
 where
-    P: Middleware + 'static,
+    M: Middleware + 'static,
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
 {
-    pub l1_provider: Arc<P>,
+    pub l1_provider: Arc<M>,
     pub l2_provider: Arc<StarknetJsonRPClient<T>>,
     pub owner: LocalWallet,
     pub world_address_book: WorldAddressBook,
@@ -128,19 +128,35 @@ impl Config<EthersProvider<Ws>, HttpTransport> {
     }
 }
 
-impl<P, T> Config<P, T>
+impl<M, T> Config<M, T>
 where
-    P: Middleware + 'static,
+    M: Middleware + 'static,
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
-{
-    pub async fn get_fee(&self) -> eyre::Result<Felt> {
+{   
+    pub fn get_world_router(&self) -> Address {
+        self.bridge_address_book.bridge_l1
+    }
+
+    pub fn get_wallet(&self) -> &LocalWallet {
+        &self.owner
+    }
+
+    pub fn get_l1_provider(&self) -> Arc<M> {
+        self.l1_provider.clone()
+    }
+
+    pub fn get_l2_provider(&self) -> Arc<StarknetJsonRPClient<T>> {
+        self.l2_provider.clone()
+    }
+    
+
+    pub async fn get_fee(&self) -> eyre::Result<FeeEstimate> {
         let l1_msg = self.build_msg_from_l1().await?;
         let fee = self
             .l2_provider
             .estimate_message_fee(l1_msg, BlockId::Tag(BlockTag::Latest))
-            .await?
-            .overall_fee;
-
+            .await?;
+        
         Ok(fee)
     }
 
