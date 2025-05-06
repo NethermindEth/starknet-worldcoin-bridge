@@ -145,7 +145,7 @@ where
     #[cfg(not(feature = "debug"))]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
-            .address(self.config.get_world_router())
+            .address(self.config.get_identity_manager())
             .event(&TreeChanged::abi_signature());
 
         let l1_provider = self.config.get_l1_provider();
@@ -198,7 +198,7 @@ where
     #[instrument(skip(self, tx))]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
-            .address(self.config.get_world_router())
+            .address(self.config.get_identity_manager())
             .event(&TreeChanged::abi_signature())
             .from_block(8204458)
             .to_block(8204460);

@@ -24,8 +24,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = Config::new_from_cli(&cli).await?;
 
-    let state_bridge = Arc::new(StateBridge::from_config(config)?);
+    Arc::new(StateBridge::from_config(config)?).start().await?;
 
-    state_bridge.start().await?;
     Ok(())
 }

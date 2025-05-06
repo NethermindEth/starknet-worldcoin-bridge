@@ -136,8 +136,8 @@ where
     M: Middleware + 'static,
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
 {
-    pub fn get_world_router(&self) -> Address {
-        self.world_address_book.worldid_router
+    pub fn get_identity_manager(&self) -> Address {
+        self.world_address_book.identity_manager
     }
 
     pub fn get_l1_bridge_address(&self) -> Address {
