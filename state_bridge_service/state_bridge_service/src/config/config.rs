@@ -196,7 +196,7 @@ where
 
         Ok(root)
     }
-    
+
     // For estimating fees when latest root is already propagated.
     #[cfg(feature = "debug")]
     pub async fn get_root(&self) -> eyre::Result<Vec<Felt>> {

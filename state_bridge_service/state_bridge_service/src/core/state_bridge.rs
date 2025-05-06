@@ -1,9 +1,12 @@
 use crate::abi::{self, TreeChanged};
 use crate::config::config::Config;
 use crate::config::utils::into_felt;
+use crate::config::{
+    cli::Fee,
+    constants::defaults::{DEFAULT_FEE, NO_FEE},
+};
+use crate::core::transaction::{self, check_gas_limit};
 use crate::error::error::StateBridgeError;
-use crate::transaction::{self, check_gas_limit};
-use crate::config::{cli::Fee, constants::defaults::{DEFAULT_FEE, NO_FEE}};
 
 use std::sync::Arc;
 
@@ -12,10 +15,10 @@ use ethers::providers::{Middleware, PubsubClient, StreamExt};
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::{Filter, U256};
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
-use tracing::instrument;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Duration;
+use tracing::instrument;
 
 /// The `StateBridge` is responsible for monitoring root changes from the `WorldRoot`, and calling the root propogation
 pub struct StateBridge<M: Middleware + 'static, T>
@@ -187,11 +190,14 @@ where
                     if root == self.config.get_root().await? {
                         tracing::info!("Latest Root Found, using dummy root for simumlation")
                     }
-        
+
                     let dummy_root = self.config.get_root().await?;
-        
-                    self.config.estimate_messaging_fee(dummy_root).await?.overall_fee
-                },
+
+                    self.config
+                        .estimate_messaging_fee(dummy_root)
+                        .await?
+                        .overall_fee
+                }
                 Fee::NoFee => NO_FEE,
             };
 
@@ -200,7 +206,7 @@ where
 
         Ok(())
     }
-    
+
     #[cfg(feature = "debug")]
     #[instrument(skip(self, tx))]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {

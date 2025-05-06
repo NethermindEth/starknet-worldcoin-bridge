@@ -7,7 +7,7 @@ use clap::Parser;
 use eyre::Result;
 use state_bridge_service::{
     config::constants::defaults::{BLOCK_CONFIRMATIONS, RELAYING_PERIOD},
-    state_bridge::StateBridge,
+    core::state_bridge::StateBridge,
 };
 
 use tracing_subscriber::{fmt, EnvFilter};
@@ -15,14 +15,14 @@ use tracing_subscriber::{fmt, EnvFilter};
 #[tokio::main]
 async fn main() -> Result<()> {
     if cfg!(feature = "debug") {
-        let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
         fmt()
             .with_env_filter(env_filter)
             .with_target(false)
             .with_level(true)
             .init();
     }
-    
 
     let cli = Cli::parse();
     let config = Config::new_from_cli(&cli).await?;
