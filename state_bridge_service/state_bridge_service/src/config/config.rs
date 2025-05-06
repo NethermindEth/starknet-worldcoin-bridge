@@ -16,6 +16,9 @@ use starknet::providers::{
     JsonRpcClient as StarknetJsonRPClient, Provider as StarknetProvider, Url,
 };
 
+use super::cli::Fee;
+use super::utils::into_felt;
+
 #[derive(Clone, Debug)]
 pub struct Config<M, T>
 where
@@ -27,6 +30,7 @@ where
     pub owner: LocalWallet,
     pub world_address_book: WorldAddressBook,
     pub bridge_address_book: BridgeAddressBook,
+    pub fee_type: Fee,
 }
 
 pub struct EnvironmentConfig {
@@ -119,6 +123,7 @@ impl Config<EthersProvider<Ws>, HttpTransport> {
         let wallet = private_key.parse::<LocalWallet>()?.with_chain_id(chain_id);
 
         Ok(Self {
+            fee_type: cli.fee,
             l1_provider: Arc::new(ethers_provider),
             l2_provider: Arc::new(starknet_provider),
             owner: wallet,
@@ -159,23 +164,11 @@ where
         Ok(fee)
     }
 
-    pub async fn estimate_simulated_fee(&self) -> eyre::Result<FeeEstimate> {
-        let dummy_fee = self.get_dummy_root().await?;
-        let l1_msg = self.build_msg_from_l1(dummy_fee).await?;
-        let fee = self
-            .l2_provider
-            .estimate_message_fee(l1_msg, BlockId::Tag(BlockTag::Latest))
-            .await?;
-
-        Ok(fee)
-    }
-
     pub async fn build_msg_from_l1(&self, root: Vec<Felt>) -> eyre::Result<MsgFromL1> {
         let from_address =
             EthAddress::from_bytes(*self.bridge_address_book.bridge_l1.as_fixed_bytes());
         let to_address = self.bridge_address_book.bridge_l2;
         let entry_point_selector = Felt::from_hex_unchecked(HANDLE_RECEIVE_ROOT_SELECTOR);
-        let payload = self.get_root().await?;
 
         Ok(MsgFromL1 {
             from_address,
@@ -197,19 +190,13 @@ where
 
         Ok(root)
     }
-
+    
     // For estimating fees when latest root is already propagated.
-    pub async fn get_dummy_root(&self) -> eyre::Result<Vec<Felt>> {
+    #[cfg(feature = "debug")]
+    pub async fn get_root(&self) -> eyre::Result<Vec<Felt>> {
         let dummy_root_0 = Felt::from(2_u128 << 128 - 1);
         let dummy_root_1 = Felt::from(2_u128 << 128 - 1);
 
         Ok(vec![dummy_root_0, dummy_root_1])
     }
-}
-
-pub fn into_felt(root: U256) -> eyre::Result<Vec<Felt>> {
-    let latest_root_0 = root.low_u128().into();
-    let latest_root_1 = (root >> 128).as_u128().into();
-
-    Ok(vec![latest_root_0, latest_root_1])
 }

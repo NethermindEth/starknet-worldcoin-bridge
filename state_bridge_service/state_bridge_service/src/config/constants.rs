@@ -29,7 +29,3 @@ pub mod defaults {
     pub const HANDLE_RECEIVE_ROOT_SELECTOR: &str =
         "0x01ec02fa6378eca6ce8f976f7e74ad1a2241692571db908bc34270508d025cf4";
 }
-
-pub mod events {
-    pub const EVENT_TREE_CHANGED: &str = "TreeChanged(uint256,uint8,uint256)";
-}

@@ -14,13 +14,15 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    fmt()
-        .with_env_filter(env_filter)
-        .with_target(false)
-        .with_level(true)
-        .init();
+    if cfg!(feature = "debug") {
+        let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        fmt()
+            .with_env_filter(env_filter)
+            .with_target(false)
+            .with_level(true)
+            .init();
+    }
+    
 
     let cli = Cli::parse();
     let config = Config::new_from_cli(&cli).await?;
@@ -30,7 +32,7 @@ async fn main() -> Result<()> {
         RELAYING_PERIOD,
         BLOCK_CONFIRMATIONS,
     )?);
-    
+
     state_bridge.start().await?;
     Ok(())
 }

@@ -1,5 +1,6 @@
 use crate::abi::{self, TreeChanged};
-use crate::config::config::{into_felt, Config};
+use crate::config::config::Config;
+use crate::config::utils::into_felt;
 use crate::error::error::StateBridgeError;
 use crate::transaction::{self, check_gas_limit};
 
@@ -112,7 +113,7 @@ where
         let listener_handle = {
             let sb = self.clone();
             tokio::spawn(async move {
-                if let Err(e) = sb.listen_test(tx).await {
+                if let Err(e) = sb.listen(tx).await {
                     tracing::warn!("listener exited: {e:#}");
                 }
             })
@@ -121,7 +122,7 @@ where
         let executor_handle = {
             let sb = self.clone();
             tokio::spawn(async move {
-                if let Err(e) = sb.execute_test(rx).await {
+                if let Err(e) = sb.execute(rx).await {
                     tracing::warn!("executor exited: {e:#}");
                 }
             })
@@ -132,7 +133,7 @@ where
         Ok(())
     }
 
-    pub async fn execute_test(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
+    pub async fn execute(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
         while let Some(evt) = rx.recv().await {
             println!("got = {:?}", evt);
 
@@ -145,12 +146,10 @@ where
         Ok(())
     }
 
-    pub async fn listen_test(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
+    pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
             .address(self.config.get_world_router())
-            .event(&TreeChanged::abi_signature())
-            .from_block(8204458)
-            .to_block(8204460);
+            .event(&TreeChanged::abi_signature());
 
         let l1_provider = self.config.get_l1_provider();
 
@@ -167,10 +166,27 @@ where
         Ok(())
     }
 
+    #[cfg(feature = "debug")]
+    pub async fn execute(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
+        while let Some(evt) = rx.recv().await {
+            println!("got = {:?}", evt);
+
+            let root = into_felt(evt.post_root)?;
+            let fee = self.config.estimate_fee(root).await?.overall_fee;
+
+            self.propagate_root(fee.to_bytes_be().into()).await?;
+        }
+
+        Ok(())
+    }
+    
+    #[cfg(feature = "debug")]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
             .address(self.config.get_world_router())
-            .event(&TreeChanged::abi_signature());
+            .event(&TreeChanged::abi_signature())
+            .from_block(8204458)
+            .to_block(8204460);
 
         let l1_provider = self.config.get_l1_provider();
 
