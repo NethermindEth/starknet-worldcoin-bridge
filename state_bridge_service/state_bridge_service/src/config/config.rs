@@ -10,7 +10,7 @@ use std::sync::Arc;
 use dotenv::dotenv;
 use ethers::providers::{Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
-use ethers::types::{Address, H160, U256};
+use ethers::types::{Address, H160};
 use starknet::core::types::{BlockId, BlockTag, EthAddress, FeeEstimate, Felt, MsgFromL1};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport as StarknetJsonRpcTransport};
 use starknet::providers::{
@@ -136,23 +136,23 @@ where
     M: Middleware + 'static,
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
 {
-    pub fn get_identity_manager(&self) -> Address {
+    pub fn identity_manager(&self) -> Address {
         self.world_address_book.identity_manager
     }
 
-    pub fn get_l1_bridge_address(&self) -> Address {
+    pub fn l1_bridge_address(&self) -> Address {
         self.bridge_address_book.bridge_l1
     }
 
-    pub fn get_wallet(&self) -> &LocalWallet {
+    pub fn wallet(&self) -> &LocalWallet {
         &self.owner
     }
 
-    pub fn get_l1_provider(&self) -> Arc<M> {
+    pub fn l1_provider(&self) -> Arc<M> {
         self.l1_provider.clone()
     }
 
-    pub fn get_l2_provider(&self) -> Arc<StarknetJsonRPClient<T>> {
+    pub fn l2_provider(&self) -> Arc<StarknetJsonRPClient<T>> {
         self.l2_provider.clone()
     }
 

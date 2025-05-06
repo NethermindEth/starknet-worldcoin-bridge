@@ -1992,19 +1992,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "l2_listener"
-version = "0.1.0"
-dependencies = [
- "eyre",
- "serde",
- "serde_json",
- "starknet",
- "state_bridge_service",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "lalrpop"
 version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

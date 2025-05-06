@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "state_bridge_service",
-    "l2_listener",
 ]
 
 [profiles.debug]

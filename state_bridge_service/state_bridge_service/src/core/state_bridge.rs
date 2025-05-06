@@ -63,10 +63,10 @@ where
 
         let tx = transaction::fill_and_simulate_eip1559_transaction(
             calldata.into(),
-            self.config.get_l1_bridge_address(),
-            self.config.get_wallet().address(),
-            self.config.get_wallet().chain_id(),
-            self.config.get_l1_provider(),
+            self.config.l1_bridge_address(),
+            self.config.wallet().address(),
+            self.config.wallet().chain_id(),
+            self.config.l1_provider(),
             value,
         )
         .await?;
@@ -75,9 +75,9 @@ where
         if check_gas_limit(gas_limit) {
             transaction::sign_and_send_transaction(
                 tx,
-                &self.config.get_wallet(),
+                &self.config.wallet(),
                 self.bridge_config.block_confirmations,
-                self.config.get_l1_provider(),
+                self.config.l1_provider(),
             )
             .await?;
         } else {
@@ -145,10 +145,10 @@ where
     #[cfg(not(feature = "debug"))]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
-            .address(self.config.get_identity_manager())
+            .address(self.config.identity_manager())
             .event(&TreeChanged::abi_signature());
 
-        let l1_provider = self.config.get_l1_provider();
+        let l1_provider = self.config.l1_provider();
 
         let mut stream = l1_provider.subscribe_logs(&filter).await?;
         while let Some(log) = stream.next().await {
@@ -198,12 +198,12 @@ where
     #[instrument(skip(self, tx))]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
-            .address(self.config.get_identity_manager())
+            .address(self.config.identity_manager())
             .event(&TreeChanged::abi_signature())
             .from_block(8204458)
             .to_block(8204460);
 
-        let l1_provider = self.config.get_l1_provider();
+        let l1_provider = self.config.l1_provider();
 
         let mut stream = l1_provider.subscribe_logs(&filter).await?;
         while let Some(log) = stream.next().await {

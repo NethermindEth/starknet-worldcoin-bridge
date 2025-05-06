@@ -1,15 +1,21 @@
-version: '3.8'
+# docker-compoe.yml
+version: '3.9'
 
 services:
   state-bridge-relay:
-    build:
-      context: ./state_bridge_service
-      dockerfile: Dockerfile
+    build: .
+    env_file: .env
+    image: state-bridge-relay:latest
     container_name: state-bridge-relay
+    environment:
+      RUST_LOG: info
+
     restart: unless-stopped
     volumes:
       - ./config:/app/config
-    # If you need to pass environment variables, uncomment and modify the following:
-    # environment:
-    #   - RUST_LOG=info
-    # If you need to pass command line arguments, add them here: 
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/state_bridge_relay", "--healthcheck"]
+      interval: 60s
+      timeout: 5s
+      retries: 3

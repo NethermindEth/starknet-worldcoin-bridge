@@ -9,19 +9,31 @@ This service relays state between Starknet and other blockchains.
 To build the Docker image manually:
 
 ```bash
-docker build -t state-bridge-relay .
+docker build
 ```
 
 ### Running with Docker Compose
 
-The easiest way to run the service is with Docker Compose:
+To run the docker image:
 
 ```bash
-docker-compose up -d
+docker compose up
+``` 
+
+### Build and run:
+
+```bash
+docker compose up -d 
 ```
 
-### Stopping the Service
+### Shutdown docker image:
 
 ```bash
-docker-compose down
-``` 
+docker down
+```
+
+### To pass in flags (default example):
+
+```bash
+docker run state-bridge-relay:latest --network sepolia --fee estimate --verbose
+```
