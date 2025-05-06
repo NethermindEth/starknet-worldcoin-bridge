@@ -53,7 +53,7 @@ jobs:
           cd state_bridge_l2/world_id_state_bridge
           scarb fmt --check
 
-      -name: Cargo fmt
+      - name: Cargo fmt
         run: |
           cd state_bridge_service
           cargo fmt --check
