@@ -13,12 +13,11 @@ use std::sync::Arc;
 
 use ethers::contract::EthEvent;
 use ethers::providers::{Middleware, PubsubClient, StreamExt};
-use ethers::signers::{LocalWallet, Signer};
+use ethers::signers::Signer;
 use ethers::types::{Filter, U256};
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::time::Duration;
 use tracing::instrument;
 
 /// The `StateBridge` is responsible for monitoring root changes from the `WorldRoot`, and calling the root propogation

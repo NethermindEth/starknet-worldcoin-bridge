@@ -1,8 +1,9 @@
 use crate::abi::abi::IWorldIDRouter;
-use crate::config::cli::{Cli, Network};
+use crate::config::cli::{Cli, Fee, Network};
 use crate::config::constants::{
     addresses::*, chain_ids::*, defaults::HANDLE_RECEIVE_ROOT_SELECTOR,
 };
+use crate::config::utils::into_felt;
 
 use std::sync::Arc;
 
@@ -15,10 +16,6 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport as StarknetJs
 use starknet::providers::{
     JsonRpcClient as StarknetJsonRPClient, Provider as StarknetProvider, Url,
 };
-
-use super::cli::Fee;
-use super::constants::defaults::DEFAULT_FEE;
-use super::utils::into_felt;
 
 #[derive(Clone, Debug)]
 pub struct Config<M, T>

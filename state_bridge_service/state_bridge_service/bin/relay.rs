@@ -5,10 +5,7 @@ use state_bridge_service::config::config::Config;
 
 use clap::Parser;
 use eyre::Result;
-use state_bridge_service::{
-    config::constants::defaults::{BLOCK_CONFIRMATIONS, RELAYING_PERIOD},
-    core::state_bridge::StateBridge,
-};
+use state_bridge_service::core::state_bridge::StateBridge;
 
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -27,11 +24,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = Config::new_from_cli(&cli).await?;
 
-    let state_bridge = Arc::new(StateBridge::from_config(
-        config,
-        RELAYING_PERIOD,
-        BLOCK_CONFIRMATIONS,
-    )?);
+    let state_bridge = Arc::new(StateBridge::from_config(config)?);
 
     state_bridge.start().await?;
     Ok(())
