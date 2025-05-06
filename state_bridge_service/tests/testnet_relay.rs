@@ -28,9 +28,7 @@ async fn testnet_relay() -> eyre::Result<()> {
     const DEFAULT_GAS: u32 = 1000000;
 
     // Filter Events
-    let filter = Filter::new()
-    .address(worldid_contract)
-    .event(event_name);
+    let filter = Filter::new().address(worldid_contract).event(event_name);
 
     // New State Bridge Service
     let state_bridge = StateBridge::new(
@@ -55,7 +53,7 @@ async fn testnet_relay() -> eyre::Result<()> {
                     DEFAULT_GAS,
                 )
                 .await;
-            
+
                 match res {
                     Ok(()) => println!("ok"),
                     Err(e) => println!("error: {:?}", e),
@@ -83,7 +81,6 @@ async fn testnet_relay() -> eyre::Result<()> {
     //     Ok(()) => println!("ok"),
     //     Err(e) => println!("error: {:?}", e),
     // }
-
 
     // Interval Based Root Propagation
     // let join_handle = state_bridge.spawn(DEFAULT_GAS);

@@ -1,14 +1,18 @@
+use crate::config::constants::defaults::DEFAULT_GAS;
+use crate::error::error::TransactionError;
+
 use std::sync::Arc;
 
 use ethers::providers::{JsonRpcClient, Middleware, PendingTransaction};
 use ethers::signers::{LocalWallet, WalletError};
 use ethers::types::transaction::eip2718::TypedTransaction;
 use ethers::types::{
-    BlockId, BlockNumber, Bytes, Eip1559TransactionRequest, TransactionReceipt, H160,
+    BlockId, BlockNumber, Bytes, Eip1559TransactionRequest, TransactionReceipt, H160, U256,
 };
+use once_cell::sync::Lazy;
 use tracing::instrument;
 
-use super::error::TransactionError;
+pub static DEFAULT_GAS_LIMIT: Lazy<U256> = Lazy::new(|| U256::from(DEFAULT_GAS));
 
 //Signs and sends transaction, bumps gas if necessary
 #[instrument(skip(wallet_key, block_confirmations, middleware))]
@@ -47,7 +51,7 @@ pub async fn fill_and_simulate_eip1559_transaction<M: Middleware>(
     from: H160,
     chain_id: u64,
     middleware: Arc<M>,
-    value: u32,
+    value: U256,
 ) -> Result<TypedTransaction, TransactionError<M>> {
     let (max_fee_per_gas, max_priority_fee_per_gas) = middleware
         .estimate_eip1559_fees(None)
@@ -81,8 +85,8 @@ pub async fn fill_and_simulate_eip1559_transaction<M: Middleware>(
         .await
         .map_err(TransactionError::MiddlewareError)?;
 
-    tx.set_gas(tx.gas().unwrap() * 150 / 100);
-
+    let gas_limit = tx.gas().unwrap() * 150 / 100;
+    tx.set_gas(gas_limit);
     let tx_gas = tx.gas().expect("Could not get tx gas");
     tracing::info!(?tx_gas, "Gas limit set");
 
@@ -124,4 +128,8 @@ pub fn raw_signed_transaction(
     wallet_key: &LocalWallet,
 ) -> Result<Bytes, WalletError> {
     Ok(tx.rlp_signed(&wallet_key.sign_transaction_sync(&tx)?))
+}
+
+pub fn check_gas_limit(set_gas: U256) -> bool {
+    set_gas <= *DEFAULT_GAS_LIMIT
 }

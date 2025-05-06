@@ -1,0 +1,30 @@
+use std::sync::Arc;
+
+use state_bridge_service::config::cli::Cli;
+use state_bridge_service::config::config::Config;
+
+use clap::Parser;
+use eyre::Result;
+use state_bridge_service::core::state_bridge::StateBridge;
+
+use tracing_subscriber::{fmt, EnvFilter};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    if cfg!(feature = "debug") {
+        let env_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        fmt()
+            .with_env_filter(env_filter)
+            .with_target(false)
+            .with_level(true)
+            .init();
+    }
+
+    let cli = Cli::parse();
+    let config = Config::new_from_cli(&cli).await?;
+
+    Arc::new(StateBridge::from_config(config)?).start().await?;
+
+    Ok(())
+}
