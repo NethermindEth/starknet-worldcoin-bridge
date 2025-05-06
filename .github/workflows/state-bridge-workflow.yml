@@ -1,6 +1,7 @@
 name: State Bridge L2 Testing
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
