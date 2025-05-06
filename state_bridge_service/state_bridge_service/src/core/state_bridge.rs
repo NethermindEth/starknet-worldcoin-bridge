@@ -1,4 +1,5 @@
 use crate::abi::{self, TreeChanged};
+use crate::config::bridge_config::BridgeConfig;
 use crate::config::config::Config;
 use crate::config::utils::into_felt;
 use crate::config::{
@@ -26,10 +27,7 @@ where
     T: StarknetJsonRpcTransport + Send + Sync + 'static,
 {
     config: Arc<Config<M, T>>,
-    /// Time delay between `propagateRoot()` transactions
-    pub relaying_period: Duration,
-    /// The number of block confirmations before a `propagateRoot()` transaction is considered finalized
-    pub block_confirmations: usize,
+    bridge_config: BridgeConfig,
 }
 
 impl<M, T> StateBridge<M, T>
@@ -44,27 +42,17 @@ where
     /// * l1_middleware - Middleware to interact with layer 1.
     /// * relaying_period - Duration between successive propagateRoot() invocations.
     /// * block_confirmations - Number of block confirmations required to consider a propagateRoot() transaction as finalized.
-    pub fn new(
-        config: impl Into<Arc<Config<M, T>>>,
-        relaying_period: Duration,
-        block_confirmations: usize,
-    ) -> Result<Self, StateBridgeError<M>> {
+    pub fn new(config: impl Into<Arc<Config<M, T>>>) -> Result<Self, StateBridgeError<M>> {
         Ok(Self {
             config: config.into(),
-            relaying_period,
-            block_confirmations,
+            bridge_config: Default::default(),
         })
     }
 
-    pub fn from_config(
-        config: impl Into<Arc<Config<M, T>>>,
-        relaying_period: Duration,
-        block_confirmations: usize,
-    ) -> Result<Self, StateBridgeError<M>> {
+    pub fn from_config(config: impl Into<Arc<Config<M, T>>>) -> Result<Self, StateBridgeError<M>> {
         Ok(Self {
             config: config.into(),
-            relaying_period,
-            block_confirmations,
+            bridge_config: Default::default(),
         })
     }
 
@@ -89,7 +77,7 @@ where
             transaction::sign_and_send_transaction(
                 tx,
                 &self.config.get_wallet(),
-                self.block_confirmations,
+                self.bridge_config.block_confirmations,
                 self.config.get_l1_provider(),
             )
             .await?;
