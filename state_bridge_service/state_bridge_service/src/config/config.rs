@@ -17,6 +17,7 @@ use starknet::providers::{
 };
 
 use super::cli::Fee;
+use super::constants::defaults::DEFAULT_FEE;
 use super::utils::into_felt;
 
 #[derive(Clone, Debug)]
@@ -142,6 +143,10 @@ where
         self.world_address_book.worldid_router
     }
 
+    pub fn get_l1_bridge_address(&self) -> Address {
+        self.bridge_address_book.bridge_l1
+    }
+
     pub fn get_wallet(&self) -> &LocalWallet {
         &self.owner
     }
@@ -154,7 +159,7 @@ where
         self.l2_provider.clone()
     }
 
-    pub async fn estimate_fee(&self, root: Vec<Felt>) -> eyre::Result<FeeEstimate> {
+    pub async fn estimate_messaging_fee(&self, root: Vec<Felt>) -> eyre::Result<FeeEstimate> {
         let l1_msg = self.build_msg_from_l1(root).await?;
         let fee = self
             .l2_provider
@@ -178,6 +183,7 @@ where
         })
     }
 
+    #[cfg(not(feature = "debug"))]
     pub async fn get_root(&self) -> eyre::Result<Vec<Felt>> {
         let identity_manager_contract = IWorldIDRouter::new(
             self.world_address_book.worldid_router,

@@ -22,9 +22,13 @@ pub mod chain_ids {
 pub mod defaults {
     use std::time::Duration;
 
+    use starknet::{core::types::Felt, macros::felt};
+
     pub const RELAYING_PERIOD: Duration = Duration::new(43200, 0); // 12 hours
     pub const BLOCK_CONFIRMATIONS: usize = 0;
     pub const DEFAULT_GAS: u32 = 300000;
+    pub const DEFAULT_FEE: Felt = felt!("1000000000"); 
+    pub const NO_FEE: Felt = felt!("0"); 
 
     pub const HANDLE_RECEIVE_ROOT_SELECTOR: &str =
         "0x01ec02fa6378eca6ce8f976f7e74ad1a2241692571db908bc34270508d025cf4";

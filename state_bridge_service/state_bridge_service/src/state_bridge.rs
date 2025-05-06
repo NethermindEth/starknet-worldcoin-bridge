@@ -3,6 +3,7 @@ use crate::config::config::Config;
 use crate::config::utils::into_felt;
 use crate::error::error::StateBridgeError;
 use crate::transaction::{self, check_gas_limit};
+use crate::config::{cli::Fee, constants::defaults::{DEFAULT_FEE, NO_FEE}};
 
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use ethers::providers::{Middleware, PubsubClient, StreamExt};
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::{Filter, U256};
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
-
+use tracing::instrument;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Duration;
@@ -64,6 +65,7 @@ where
         })
     }
 
+    #[instrument(skip(self))]
     pub async fn propagate_root(&self, value: U256) -> Result<(), StateBridgeError<M>> {
         let calldata = abi::abi::ISTATEBRIDGE_ABI
             .function("propagateRoot")?
@@ -71,7 +73,7 @@ where
 
         let tx = transaction::fill_and_simulate_eip1559_transaction(
             calldata.into(),
-            self.config.get_world_router(),
+            self.config.get_l1_bridge_address(),
             self.config.get_wallet().address(),
             self.config.get_wallet().chain_id(),
             self.config.get_l1_provider(),
@@ -133,12 +135,16 @@ where
         Ok(())
     }
 
+    #[cfg(not(feature = "debug"))]
     pub async fn execute(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
         while let Some(evt) = rx.recv().await {
-            println!("got = {:?}", evt);
-
             let root = into_felt(evt.post_root)?;
-            let fee = self.config.estimate_fee(root).await?.overall_fee;
+
+            let fee = match self.config.fee_type {
+                Fee::Default => DEFAULT_FEE,
+                Fee::Estimate => self.config.estimate_messaging_fee(root).await?.overall_fee,
+                Fee::NoFee => NO_FEE,
+            };
 
             self.propagate_root(fee.to_bytes_be().into()).await?;
         }
@@ -146,6 +152,7 @@ where
         Ok(())
     }
 
+    #[cfg(not(feature = "debug"))]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
             .address(self.config.get_world_router())
@@ -167,12 +174,26 @@ where
     }
 
     #[cfg(feature = "debug")]
+    #[instrument(skip(self, rx))]
     pub async fn execute(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
         while let Some(evt) = rx.recv().await {
             println!("got = {:?}", evt);
 
             let root = into_felt(evt.post_root)?;
-            let fee = self.config.estimate_fee(root).await?.overall_fee;
+
+            let fee = match self.config.fee_type {
+                Fee::Default => DEFAULT_FEE,
+                Fee::Estimate => {
+                    if root == self.config.get_root().await? {
+                        tracing::info!("Latest Root Found, using dummy root for simumlation")
+                    }
+        
+                    let dummy_root = self.config.get_root().await?;
+        
+                    self.config.estimate_messaging_fee(dummy_root).await?.overall_fee
+                },
+                Fee::NoFee => NO_FEE,
+            };
 
             self.propagate_root(fee.to_bytes_be().into()).await?;
         }
@@ -181,6 +202,7 @@ where
     }
     
     #[cfg(feature = "debug")]
+    #[instrument(skip(self, tx))]
     pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         let filter = Filter::new()
             .address(self.config.get_world_router())
