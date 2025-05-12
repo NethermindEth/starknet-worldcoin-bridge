@@ -51,7 +51,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./state_bridge_service
-          platforms: "linux/arm64"
+          platforms: "linux/amd64"
           push: true
           file: ./state_bridge_service/Dockerfile
           tags: |
