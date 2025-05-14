@@ -10,45 +10,47 @@ contract TestStarkStateBridge is Script {
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     uint256 starkWorldIDAddress = vm.envUint("STARK_WORLD_ID_ADDRESS");
     StarkStateBridge starkStateBridge = StarkStateBridge(vm.envAddress("STARK_STATE_BRIDGE"));
-    MockWorldIDIdentityManager mockWorldIDIdentityManager = MockWorldIDIdentityManager(vm.envAddress("WORLD_ID_IDENTITY_MANAGER"));
-    uint256 immutable DEFAULT_GAS = 1000000;
-    function run() public{
+    MockWorldIDIdentityManager mockWorldIDIdentityManager =
+        MockWorldIDIdentityManager(vm.envAddress("WORLD_ID_IDENTITY_MANAGER"));
+    uint256 immutable DEFAULT_FEE = 1000000;
+
+    function run() public {
         vm.startBroadcast(deployerPrivateKey);
 
-        runRootExpiryTest(); 
-        runTransferOwner(); 
+        runRootExpiryTest();
+        runTransferOwner();
 
         vm.stopBroadcast();
     }
 
     function runRootPropogation() public {
-        starkStateBridge.propagateRoot{value: DEFAULT_GAS}();
+        starkStateBridge.propagateRoot{value: DEFAULT_FEE}();
         mockWorldIDIdentityManager.incrementRoot(); // mock function to simulate new root
     }
 
     function runRootExpiryTest() public {
         // Setup
         runRootPropogation();
-        runRootPropogation();   
+        runRootPropogation();
 
-        // Trigger error 
-        starkStateBridge.propagateRoot{value: DEFAULT_GAS}(); // Error CANNOT_OVERWRITE_ROOT
+        // Trigger error
+        starkStateBridge.propagateRoot{value: DEFAULT_FEE}(); // Error CANNOT_OVERWRITE_ROOT
         mockWorldIDIdentityManager.incrementRoot();
 
         // Set Invalid Root History Expiry
-        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(0);
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_FEE}(0);
         runRootPropogation();
 
         // Set Valid Root History Expiry
-        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(10000000);
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_FEE}(10000000);
         runRootPropogation();
 
         // Set Valid Root History Expiry But Expired
-        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(5);
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_FEE}(5);
         runRootPropogation();
 
         // Set Valid Root History Expiry, Expired But Valid (latest root always valid)
-        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_GAS}(5);
+        starkStateBridge.setRootHistoryExpiry{value: DEFAULT_FEE}(5);
         runRootPropogation();
     }
 
@@ -60,7 +62,3 @@ contract TestStarkStateBridge is Script {
         starkStateBridge.transferOwnership(address(1000));
     }
 }
-        
-        
-        
-    

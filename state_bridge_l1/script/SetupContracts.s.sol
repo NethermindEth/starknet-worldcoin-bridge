@@ -6,12 +6,13 @@ import "../src/starknet/StarknetMessaging.sol";
 import "../src/StarkStateBridge.sol";
 import "../src/mock/MockWorldIDIdentityManager.sol";
 /**
-   Deploys the StarkStateBridge and StarknetMessaging contracts.
-*/
+ * Deploys the StarkStateBridge and StarknetMessaging contracts.
+ */
+
 contract LocalSetup is Script {
     function setUp() public {}
 
-    function run() public{
+    function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         uint256 starkWorldIDAddress = vm.envUint("STARK_WORLD_ID_ADDRESS");
         string memory json = "local_testing";
@@ -23,7 +24,8 @@ contract LocalSetup is Script {
 
         address mockWorldIDIdentityManager = address(new MockWorldIDIdentityManager());
 
-        address contractMsg = address(new StarkStateBridge(mockWorldIDIdentityManager, starkWorldIDAddress, snCoreContract));
+        address contractMsg =
+            address(new StarkStateBridge(mockWorldIDIdentityManager, starkWorldIDAddress, snCoreContract));
         vm.serializeString(json, "contractMsg_address", vm.toString(contractMsg));
 
         vm.stopBroadcast();

@@ -8,9 +8,9 @@ pub mod addresses {
     pub const MAINNET_WORLDID_ROUTER: &str = "0x163b09b4fE21177c455D850BD815B6D583732432 ";
     pub const MAINNET_IDENTITY_MANAGER: &str = "0xf7134CE138832c1456F2a91D64621eE90c2bddEa";
 
-    pub const SEPOLIA_BRIDGE_L1: &str = "0x78b03B4F6c6Ca9D3B53d27C65d6eDaD8aDC1FFF6";
+    pub const SEPOLIA_BRIDGE_L1: &str = "0x5aA8058C1E090d8299162b021e32a284Ec55f3D0";
     pub const SEPOLIA_BRIDGE_L2: &str =
-        "0x031bae9929463f242f8de713bd46fcbfd338302a7a89c1be90d62a764d968ab8";
+        "0x01167d6979330fcc6633111d72416322eb0e3b78ad147a9338abea3c04edfc8a";
     pub const MAINNET_BRIDGE_L1: &str = "";
     pub const MAINNET_BRIDGE_L2: &str = "";
 }
