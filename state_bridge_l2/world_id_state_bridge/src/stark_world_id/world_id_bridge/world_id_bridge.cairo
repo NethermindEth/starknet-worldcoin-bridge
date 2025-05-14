@@ -219,7 +219,6 @@ pub mod WorldID {
         /// backend. Use the Garaga verifier to verify.
         /// https://github.com/keep-starknet-strange/garaga
 
-
         fn verify_groth16_proof_bn254(
             self: @ComponentState<TContractState>, full_proof_with_hints: Span<felt252>,
         ) -> Option<Span<u256>> {
