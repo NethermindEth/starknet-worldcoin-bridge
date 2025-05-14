@@ -48,9 +48,9 @@ cargo test
 ```
 
 ## Sepolia Test 
-L1 address: https://sepolia.etherscan.io/address/0xb6455FCb8e092aB70C7195709AbF3832ff9a6F34
+L1 address: https://sepolia.etherscan.io/address/0x5aA8058C1E090d8299162b021e32a284Ec55f3D0
 
-L2 address: https://sepolia.starkscan.co/contract/0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3#transactions
+L2 address: https://sepolia.starkscan.co/contract/0x01167d6979330fcc6633111d72416322eb0e3b78ad147a9338abea3c04edfc8a#transactions
 
 ## Disclaimer
 Contracts are not yet audited.
