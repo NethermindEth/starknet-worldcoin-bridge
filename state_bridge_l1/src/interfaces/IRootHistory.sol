@@ -12,5 +12,5 @@ interface IRootHistory {
     /// @param expiryTime The new amount of time it takes for a root to expire.
     ///
     /// @custom:reverts string If the caller is not the owner.
-    function setRootHistoryExpiry(uint256 expiryTime) external;
+    function setRootHistoryExpiry(uint256 expiryTime) external payable;
 }
