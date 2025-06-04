@@ -6,6 +6,10 @@ import "../src/starknet/StarknetMessaging.sol";
 import "../src/StarkStateBridge.sol";
 import "../src/mock/MockWorldIDIdentityManager.sol";
 
+error AddressZero();
+error FeeLimitZero();
+error ExceededFeeLimit();
+
 contract UnitStarkStateBridge is Test {
     address worldIDIdentityManager = vm.envAddress("WORLD_ID_IDENTITY_MANAGER");
     uint256 starkWorldIDAddress = vm.envUint("STARK_WORLD_ID_ADDRESS");
@@ -87,24 +91,28 @@ contract UnitStarkStateBridge is Test {
         starkStateBridge.setStarknetCoreContract(newStarknetCoreContract);
     }
 
-    function testFail_SetWorldIDIdentityManager() public {
+    function test_RevertIf_SetWorldIDIdentityManagerIsZero() public {
         address zero_address = address(0);
+        vm.expectRevert(AddressZero.selector);
         starkStateBridge.setWorldIDIdentityManager(zero_address);
     }
 
-    function testFail_SetStarkWorldIDAddress() public {
+    function test_RevertIf_SetStarkWorldIDAddressIsZero() public {
         uint256 zero_address = 0;
+        vm.expectRevert(AddressZero.selector);
         starkStateBridge.setStarkWorldIDAddress(zero_address);
     }
 
-    function testFail_SetStarknetCoreContract() public {
+    function test_RevertIf_SetStarknetCoreContractIsZero() public {
         address zero_address = address(0);
+        vm.expectRevert(AddressZero.selector);
         starkStateBridge.setStarknetCoreContract(zero_address);
     }
 
-    function testFail_TransferOwnershipStark() public {
+    function test_RevertIf_TransferOwnershipStarkToZeroAddress() public {
         address zero_address = address(0);
-        starkStateBridge.transferOwnership(zero_address);
+        vm.expectRevert(AddressZero.selector);
+        starkStateBridge.transferOwnershipStark(zero_address);
     }
 
     receive() external payable {}
