@@ -1,0 +1,65 @@
+# Getting Started
+
+This guide provides the minimal commands needed to quickly set up and deploy the Starknet World ID Bridge.
+
+## Quick Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/NethermindEth/starknet-worldcoin-bridge.git
+```
+
+### 2. Deploy L1 Contract
+
+```bash
+forge create --rpc-url "your_eth_rpc_here" src/StarkStateBridge.sol:StarkStateBridge --constructor-args 0xb2ead588f14e69266d1b87936b75325181377076 1 0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057
+```
+
+### 3. Deploy L2 Contract
+
+```bash
+starkli deploy --account "your_account_here" 0x014ebe12cfbf193a8c929213e6ad40cf3111ba1c931c3b3ac0de57ffa903186f --keystore "your_keystore_here" "your_L1_contract_address(from step 1)" 30
+```
+
+### 4. Configure the Bridge
+
+```bash
+cast send "your_L1_contract_address(from step 1)" --from "your_L1_wallet_address" --rpc-url "your_eth_rpc_here" "setStarkWorldIDAddress(uint256)" "Your_L2_contract_address_(from step 2)"
+```
+
+### 5. Activate the Bridge
+
+```bash
+cast send "your_L1_contract_address(from step 1)" --from "your_L1_wallet_address" --rpc-url "your_eth_rpc_here" "propagateRoot()"
+```
+
+**Note:** You will need to supply your L1 account/wallet to use the bridge.
+
+## Prerequisites
+
+Before running these commands, make sure you have all the required tools installed. See our [Prerequisites Guide](/prerequisites).
+
+## Complete Setup Guide
+
+For detailed explanations and testing instructions, check out our [Complete Setup Guide](/setup).
+
+## Verification
+
+To verify your setup is working correctly, see our [Verification Guide](/verification).
+
+## Testnet Deployment
+
+For testnet deployment, you can reference these addresses:
+
+- L1 address: [0xb6455FCb8e092aB70C7195709AbF3832ff9a6F34](https://sepolia.etherscan.io/address/0xb6455FCb8e092aB70C7195709AbF3832ff9a6F34)
+- L2 address: [0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3](https://sepolia.starkscan.co/contract/0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3#transactions)
+
+## Next Steps
+
+After successfully setting up the Starknet World ID Bridge, you can:
+
+1. Integrate it with your Starknet applications
+2. Implement Sybil-resistant verification in your smart contracts
+3. Learn more about World ID verification patterns
+4. Contribute to the bridge development

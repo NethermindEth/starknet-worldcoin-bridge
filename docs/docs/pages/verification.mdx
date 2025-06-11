@@ -1,0 +1,95 @@
+# Verification Guide
+
+This guide helps you verify that your Starknet World ID Bridge setup is working correctly.
+
+## Prerequisites Verification
+
+After installing all prerequisites, verify your setup by running:
+
+```bash
+# Check Rust
+rustc --version
+
+# Check Foundry
+forge --version
+
+# Check Starkli
+starkli --version
+```
+
+All commands should return version information without errors.
+
+## Bridge Deployment Verification
+
+### 1. Verify L1 Contract Deployment
+
+Check that your L1 contract was deployed successfully:
+
+```bash
+cast code "your_L1_contract_address" --rpc-url "your_eth_rpc_here"
+```
+
+This should return the contract bytecode (not `0x`).
+
+### 2. Verify L2 Contract Deployment
+
+Check your L2 contract deployment on Starknet:
+
+```bash
+starkli class-hash-at "your_L2_contract_address"
+```
+
+This should return the class hash of your deployed contract.
+
+### 3. Verify Bridge Configuration
+
+Check that the L1 contract has the correct L2 address configured:
+
+```bash
+cast call "your_L1_contract_address" --rpc-url "your_eth_rpc_here" "starkWorldIDAddress()(uint256)"
+```
+
+This should return your L2 contract address.
+
+## Functional Verification
+
+### Test Root Propagation
+
+Try propagating a root to test the bridge functionality:
+
+```bash
+cast send "your_L1_contract_address" --from "your_L1_wallet_address" --rpc-url "your_eth_rpc_here" "propagateRoot()" --value 0.01ether
+```
+
+Monitor the transaction to ensure it completes successfully.
+
+### Check Bridge Status
+
+Verify the bridge is active and processing messages correctly by checking recent transactions on both L1 and L2 contracts.
+
+## Troubleshooting
+
+### Common Issues
+
+**Prerequisites not found:**
+- Ensure your PATH is properly configured
+- Restart your terminal after installation
+- Check that installation completed without errors
+
+**Contract deployment fails:**
+- Verify you have sufficient funds for gas fees
+- Check that your RPC URL is correct and accessible
+- Ensure you're using the correct network (mainnet vs testnet)
+
+**Bridge configuration issues:**
+- Double-check all contract addresses
+- Verify transaction confirmations before proceeding
+- Ensure you're using the correct wallet addresses
+
+## Next Steps
+
+Once verification is complete:
+
+- Return to [Getting Started](/getting-started) for next steps
+- Check out the [Complete Setup Guide](/setup) for detailed explanations
+- Explore integration patterns and examples

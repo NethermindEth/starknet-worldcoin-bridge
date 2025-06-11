@@ -1,0 +1,45 @@
+# Overview
+
+The [Starknet World ID Bridge](https://github.com/NethermindEth/starknet-worldcoin-bridge) connects [World](https://world.org/)'s proof-of-personhood system to the [Starknet ecosystem](https://www.starknet.io/dapps/). This integration enables developers to incorporate human verification into their Starknet DApps while preserving user privacy through zero-knowledge proofs.
+
+Developed as part of a targeted grant from the [World Foundation](https://foundation.world.org/), this bridge represents a strategic enhancement to Starknet's capabilities, positioning it among the growing ecosystem of [networks](https://docs.world.org/world-id/reference/contracts#supported-chains) supporting [World ID verification](https://world.org/blog/announcements/new-state-bridge-update-enables-permissionless-integration-world-id). The implementation features a custom-built Groth16 verifier written in [Cairo](https://www.cairo-lang.org/), addressing one of the most significant technical challenges in bringing [World ID](https://world.org/world-id) to non-EVM environments.
+
+## Current Status & Roadmap
+
+The Starknet World ID Bridge is under active development with substantial progress on core components. The engineering team at [Nethermind](https://www.nethermind.io/) is focused on delivering a production-ready solution that meets the high standards of both Starknet and World infrastructure.
+
+### Development Timeline
+
+The development process is structured into focused phases:
+
+:::success
+- **Phase 1** - Core contract implementation and cross-chain messaging
+:::
+:::tip
+- **Phase 2**: Garaga library integration for optimized Groth16 verification
+:::
+:::note
+- **Phase 3**: Fossil prover integration for enhanced decentralization
+:::
+:::note
+- **Phase 4**: Comprehensive security audits and performance optimization
+:::
+:::note
+- **Phase 5**: Production release with developer tooling and documentation
+:::
+## Technical Architecture
+
+The bridge employs a secure cross-chain architecture to enable World ID verification on Starknet.
+
+On Ethereum (L1), a dedicated contract monitors the World ID Identity Manager to access the latest identity Merkle tree root. This root hash serves as a cryptographic commitment to the entire set of verified World ID identities.
+
+The root data is transmitted to Starknet (L2) via Starknet's [L1-L2 messaging mechanism](https://docs.starknet.io/architecture-and-concepts/network-architecture/messaging-mechanism/), which provides secure asynchronous communication between Ethereum and Starknet. This mechanism ensures that only authorized messages from the L1 contract can update the state on L2.
+
+On Starknet, a Cairo implementation receives these roots and implements a specialized Groth16 zero-knowledge proof verifier. This verification system allows Starknet applications to validate World ID proofs without requiring additional L1 interactions, providing gas-efficient and privacy-preserving identity verification.
+
+For end-users, the process is seamless—they generate World ID proofs through the standard World ID interface, then submit these proofs to Starknet applications. The on-chain verification confirms their unique humanity status without revealing biometric data or personal information.
+## Join the Ecosystem
+
+Developers are invited to explore, test, and contribute to this critical infrastructure project. The source code is available on [GitHub](https://github.com/NethermindEth/starknet-worldcoin-bridge), with comprehensive documentation to guide users through understanding and working with the bridge.
+
+By integrating the Starknet World ID Bridge into applications, developers join the growing movement toward more secure, privacy-preserving, and authentically human digital experiences.
