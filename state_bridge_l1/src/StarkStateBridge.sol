@@ -46,7 +46,7 @@ contract StarkStateBridge is Ownable, IRootHistory {
     /// @notice Emitted when the StateBridge gives ownership of the StarkWorldID contract
     /// @param previousOwner The previous owner of the StarkWorldID contract
     /// @param newOwner The new owner of the StarkWorldID contract
-    event OwnershipTransferredStark(address indexed previousOwner, address indexed newOwner);
+    event L1StateBridgeAddressOnL2Changed(address indexed previousOwner, address indexed newOwner);
 
     /// @notice Emitted when the StateBridge sends a root to the StarkWorldID contract
     /// @param root The root sent to the StarkWorldID contract on Starknet
@@ -140,26 +140,26 @@ contract StarkStateBridge is Ownable, IRootHistory {
         emit RootPropagated(latestRoot);
     }
 
-    // @notice Adds functionality to the StateBridge to transfer ownership
-    // @param _owner new owner (EOA or contract)
+    // @notice Adds functionality to the StateBridge to allow the L1 state bridge address on L2 to be changed. 
+    // @param _owner 
     // @custom:revert if _owner is set to the zero address
-    function transferOwnershipStark(address _owner) external payable onlyOwner {
+    function changeL1StateBridgeAddress(address newL1StateBridgeAddress) external payable onlyOwner {
         if (msg.value >= _feeLimitTransferOwnership) {
             revert ExceededFeeLimit();
         }
 
-        if (_owner == address(0)) {
+        if (newL1StateBridgeAddress == address(0)) {
             revert AddressZero();
         }
 
         uint256[] memory payload = new uint256[](1);
-        payload[0] = uint256(uint160(_owner));
+        payload[0] = uint256(uint160(newL1StateBridgeAddress));
 
         IStarknetMessaging(starknetCoreContract).sendMessageToL2{value: msg.value}(
-            starkWorldIDAddress, HANDLE_TRANSFER_OWNERSHIP_SELECTOR, payload
+            starkWorldIDAddress, HANDLE_CHANGE_L1_STATE_BRIDGE_ADDRESS_SELECTOR, payload
         );
 
-        emit OwnershipTransferredStark(owner(), _owner);
+        emit L1StateBridgeAddressOnL2Changed(address(this), newL1StateBridgeAddress);
     }
 
     /// @notice Adds functionality to the StateBridge to set the root history expiry on Starknet
