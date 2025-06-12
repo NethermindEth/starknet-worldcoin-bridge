@@ -111,7 +111,7 @@ pub mod StarkWorldID {
     ///     transferring the contract address of the L1 contract. This is in case the L1 contract
     ///     needs to be replaced/modified/etc.
     #[l1_handler]
-    pub fn transfer_ownership(
+    pub fn change_l1_state_bridge_address(
         ref self: ContractState, from_address: felt252, new_owner: EthAddress,
     ) {
         self.cross_domain_ownable_storage.only_cross_domain_owner(from_address);

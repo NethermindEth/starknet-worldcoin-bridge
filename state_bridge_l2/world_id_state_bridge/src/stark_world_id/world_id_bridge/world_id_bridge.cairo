@@ -211,13 +211,17 @@ pub mod WorldID {
         ///
         /// # Returns
         ///
-        /// Either panics or succeeds on verification
+        /// Either panics or returns None on failure or succeeds and returns the public inputs on verification
         ///
         /// # Notice
         ///
         /// The the mpcheck_hint, small_Q, and msm_hint are precomputed using Garaga's pythonic
         /// backend. Use the Garaga verifier to verify.
         /// https://github.com/keep-starknet-strange/garaga
+        /// 
+        /// The function is modified to check that the first public input, the root, 
+        /// matches with the root stored in this contract. The root inside this contract is the
+        /// root sent by the L1->L2 message.  
 
         fn verify_groth16_proof_bn254(
             self: @ComponentState<TContractState>, full_proof_with_hints: Span<felt252>,
