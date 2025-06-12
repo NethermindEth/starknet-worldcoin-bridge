@@ -211,7 +211,7 @@ pub mod WorldID {
         ///
         /// # Returns
         ///
-        /// Either panics or succeeds on verification
+        /// Either panics or returns None on failure or succeeds and returns the public inputs on verification
         ///
         /// # Notice
         ///
