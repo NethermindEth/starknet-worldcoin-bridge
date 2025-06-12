@@ -181,7 +181,7 @@ contract StarkStateBridge is Ownable, IRootHistory {
     }
 
     ///////////////////////////////////////////////////////////////////
-    ///                         STARK Fee LIMIT                      ///
+    ///                         STARK FEE LIMIT                     ///
     ///////////////////////////////////////////////////////////////////
 
     /// @notice Sets the fee limit for the propagateRoot method
@@ -208,8 +208,8 @@ contract StarkStateBridge is Ownable, IRootHistory {
         emit SetFeeLimitSetRootHistoryExpiry(_starkFeeLimit);
     }
 
-    /// @notice Sets the fee limit for the SetRootHistoryExpiry method
-    /// @param _starkFeeLimit The new fee limit for the SetRootHistoryExpiry method
+    /// @notice Sets the fee limit for the transferOwnershipStark method
+    /// @param _starkFeeLimit The new fee limit for the transferOwnershipStark method
     function setFeeLimitTransferOwnership(uint256 _starkFeeLimit) external onlyOwner {
         if (_starkFeeLimit <= 0) {
             revert FeeLimitZero();
