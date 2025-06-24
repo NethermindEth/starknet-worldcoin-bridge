@@ -201,8 +201,8 @@ pub mod WorldID {
         ///     }
         ///     The public inputs are in order:
         ///     * 'root' - The root of the Merkle tree
-        ///     * 'signalHash' - A keccak256 hash of the Semaphore signal
         ///     * 'nullifierHash' - The nullifier hash
+        ///     * 'signalHash' - A keccak256 hash of the Semaphore signal
         ///     * 'externalNullifierHash' - A keccak256 hash of the external nullifier
         ///
         /// * 'mpcheck_hint' - The check hint for BN254
