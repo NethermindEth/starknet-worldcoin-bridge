@@ -1,65 +1,87 @@
 # Getting Started
 
-This guide provides the minimal commands needed to quickly set up and deploy the Starknet World ID Bridge.
+This guide shows you how to integrate World ID verification into your Starknet smart contracts.
 
-## Quick Setup
+## Step 1: Define the Interface
 
-### 1. Clone the Repository
+```rust
+use starknet::ContractAddress;
 
-```bash
-git clone https://github.com/NethermindEth/starknet-worldcoin-bridge.git
+#[starknet::interface]
+pub trait IGroth16VerifierBN254<TContractState> {
+    fn verify_groth16_proof_bn254(
+        self: @TContractState, 
+        full_proof_with_hints: Span<felt252>
+    ) -> Option<Span<u256>>;
+}
+
+#[starknet::interface]
+pub trait IMyApp<TContractState> {
+    fn verify_human(ref self: TContractState, full_proof_with_hints: Span<felt252>) -> bool;
+}
 ```
 
-### 2. Deploy L1 Contract
+## Step 2: Integrate in Your Contract
 
-```bash
-forge create --rpc-url "your_eth_rpc_here" src/StarkStateBridge.sol:StarkStateBridge --constructor-args 0xb2ead588f14e69266d1b87936b75325181377076 1 0xE2Bb56ee936fd6433DC0F6e7e3b8365C906AA057
+```rust
+#[starknet::contract]
+mod MyApp {
+    use starknet::ContractAddress;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::{IGroth16VerifierBN254Dispatcher, IGroth16VerifierBN254DispatcherTrait, IMyApp};
+    
+    #[storage]
+    struct Storage {
+        world_id_bridge: ContractAddress, // Address of the deployed World ID Bridge
+    }
+    
+    #[constructor]
+    fn constructor(ref self: ContractState, world_id_bridge_address: ContractAddress) {
+        // Store the World ID Bridge contract address
+        self.world_id_bridge.write(world_id_bridge_address);
+    }
+    
+    #[abi(embed_v0)]
+    impl MyAppImpl of IMyApp<ContractState> {
+        fn verify_human(
+            ref self: ContractState,
+            full_proof_with_hints: Span<felt252> // Garaga-formatted proof with hints
+        ) -> bool {
+            // Create dispatcher to call the World ID Bridge
+            let world_id = IGroth16VerifierBN254Dispatcher { 
+                contract_address: self.world_id_bridge.read() 
+            };
+            
+            // Verify the proof - bridge automatically validates root
+            match world_id.verify_groth16_proof_bn254(full_proof_with_hints) {
+                Option::Some(public_inputs) => {
+                    // Proof valid - extract public inputs
+                    let _root = *public_inputs.at(0);                    // Merkle tree root (auto-validated)
+                    let _nullifier_hash = *public_inputs.at(1);         // Prevents replay attacks
+                    let _signal_hash = *public_inputs.at(2);            // Your app signal
+                    let _external_nullifier_hash = *public_inputs.at(3); // Your action identifier
+                    
+                    // Add your application logic here
+                    true
+                },
+                Option::None => false // Proof verification failed
+            }
+        }
+    }
+}
 ```
 
-### 3. Deploy L2 Contract
+## Step 3: Bridge Contract Addresses
 
-```bash
-starkli deploy --account "your_account_here" 0x014ebe12cfbf193a8c929213e6ad40cf3111ba1c931c3b3ac0de57ffa903186f --keystore "your_keystore_here" "your_L1_contract_address(from step 1)" 30
-```
+### Testnet
+- **Bridge Contract**: `0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3`
 
-### 4. Configure the Bridge
+### Mainnet
+- Coming soon
 
-```bash
-cast send "your_L1_contract_address(from step 1)" --from "your_L1_wallet_address" --rpc-url "your_eth_rpc_here" "setStarkWorldIDAddress(uint256)" "Your_L2_contract_address_(from step 2)"
-```
+## Key Points
 
-### 5. Activate the Bridge
-
-```bash
-cast send "your_L1_contract_address(from step 1)" --from "your_L1_wallet_address" --rpc-url "your_eth_rpc_here" "propagateRoot()"
-```
-
-**Note:** You will need to supply your L1 account/wallet to use the bridge.
-
-## Prerequisites
-
-Before running these commands, make sure you have all the required tools installed. See our [Prerequisites Guide](/prerequisites).
-
-## Complete Setup Guide
-
-For detailed explanations and testing instructions, check out our [Complete Setup Guide](/setup).
-
-## Verification
-
-To verify your setup is working correctly, see our [Verification Guide](/verification).
-
-## Testnet Deployment
-
-For testnet deployment, you can reference these addresses:
-
-- L1 address: [0xb6455FCb8e092aB70C7195709AbF3832ff9a6F34](https://sepolia.etherscan.io/address/0xb6455FCb8e092aB70C7195709AbF3832ff9a6F34)
-- L2 address: [0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3](https://sepolia.starkscan.co/contract/0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3#transactions)
-
-## Next Steps
-
-After successfully setting up the Starknet World ID Bridge, you can:
-
-1. Integrate it with your Starknet applications
-2. Implement Sybil-resistant verification in your smart contracts
-3. Learn more about World ID verification patterns
-4. Contribute to the bridge development
+- The bridge automatically validates World ID roots
+- Public inputs are returned in order: `[root, nullifierHash, signalHash, externalNullifierHash]`
+- Proofs must be formatted with Garaga hints before submission
+- Returns `Option::Some(public_inputs)` if valid, `Option::None` if invalid
