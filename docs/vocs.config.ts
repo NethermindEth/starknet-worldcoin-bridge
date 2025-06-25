@@ -13,27 +13,26 @@ export default defineConfig({
     {
       text: 'Introduction',
       items: [
-        { text: 'Overview', link: '/overview' },
-        { text: 'Why It Matters', link: '/why-it-matters' },
-        { text: 'Getting Started', link: '/getting-started' },
+        { text: 'Overview', link: '/overview' }, 
+        { text: 'Why It Matters', link: '/why-it-matters' }, 
+        { text: 'Getting Started', link: '/getting-started' }, 
       ]
     },
     {
       text: 'Guides',
       items: [
         { text: 'Pre Requisites', link: '/prerequisites' },
-        { text: 'Bridge Setup', link: '/setup' },
-        { text: 'Verification', link: '/verification' },
+        { text: 'Bridge Setup', link: '/setup' }, 
+        { text: 'Verification', link: '/verification' }, 
       ]
     },
     {
-      text: 'Architecture',
+      text: 'Architecture', 
       items: [
-        { text: 'System Overview', link: '/system-overview' },
-        { text: 'L1 Components', link: '/l1-components' },
-        { text: 'L2 Components', link: '/l2-components' },
+        { text: 'System Overview', link: '/system-overview' }, 
+        { text: 'L1 Components', link: '/l1-components' }, 
+        { text: 'L2 Components', link: '/l2-components' }, 
       ]
     },
   ],
 })
-

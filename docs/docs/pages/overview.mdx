@@ -2,7 +2,7 @@
 
 The [Starknet World ID Bridge](https://github.com/NethermindEth/starknet-worldcoin-bridge) connects [World](https://world.org/)'s proof-of-personhood system to the [Starknet ecosystem](https://www.starknet.io/dapps/). This integration enables developers to incorporate human verification into their Starknet DApps while preserving user privacy through zero-knowledge proofs.
 
-Developed as part of a targeted grant from the [World Foundation](https://foundation.world.org/), this bridge represents a strategic enhancement to Starknet's capabilities, positioning it among the growing ecosystem of [networks](https://docs.world.org/world-id/reference/contracts#supported-chains) supporting [World ID verification](https://world.org/blog/announcements/new-state-bridge-update-enables-permissionless-integration-world-id). The implementation features a custom-built Groth16 verifier written in [Cairo](https://www.cairo-lang.org/), addressing one of the most significant technical challenges in bringing [World ID](https://world.org/world-id) to non-EVM environments.
+Developed as part of a targeted grant from the [World Foundation](https://foundation.world.org/), this bridge represents a strategic enhancement to Starknet's capabilities, positioning it among the growing ecosystem of [networks](https://docs.world.org/world-id/reference/contracts#supported-chains) supporting [World ID verification](https://world.org/blog/announcements/new-state-bridge-update-enables-permissionless-integration-world-id). The implementation utilizes [Garaga](https://github.com/keep-starknet-strange/garaga)'s Groth16 verifier written in [Cairo](https://www.cairo-lang.org/), addressing one of the most significant technical challenges in bringing [World ID](https://world.org/world-id) to non-EVM environments.
 
 ## Current Status & Roadmap
 
@@ -15,17 +15,14 @@ The development process is structured into focused phases:
 :::success
 - **Phase 1** - Core contract implementation and cross-chain messaging
 :::
-:::tip
+:::success
 - **Phase 2**: Garaga library integration for optimized Groth16 verification
 :::
-:::note
-- **Phase 3**: Fossil prover integration for enhanced decentralization
+:::success
+- **Phase 3**: Comprehensive security audits and performance optimization
 :::
 :::note
-- **Phase 4**: Comprehensive security audits and performance optimization
-:::
-:::note
-- **Phase 5**: Production release with developer tooling and documentation
+- **Phase 4**: Production release with developer tooling and documentation
 :::
 ## Technical Architecture
 
