@@ -1,107 +1,58 @@
 # Prerequisites
 
-Before you begin, ensure you have the following:
+Before integrating World ID verification into your Starknet applications, ensure you have the necessary knowledge and tools.
 
-- [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) for Ethereum contract development
-- [Starkli](https://github.com/xJonathanLEI/starkli) for Starknet contract deployment
-- Basic familiarity with Ethereum and Starknet development
+## Knowledge Requirements
 
-## Rust
+### Starknet Development
 
-Rust is a general-purpose programming language that emphasizes performance, type safety, and concurrency.
+You should be familiar with:
+- **Cairo programming language** - Basic syntax and smart contract development
+- **Starknet concepts** - Contract deployment, transactions, and state management
+- **Smart contract patterns** - Storage, events, and external contract calls
 
-### MacOS and Linux
+> New to Starknet? Check out the [Starknet Documentation](https://docs.starknet.io/) for comprehensive guides.
 
-Rust is installed and managed using the `rustup` tool. For more information, see the `rustup` documentation.
+### World ID Concepts
 
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+Understanding of:
+- **Proof-of-personhood verification** - What World ID provides and why it matters
+- **Zero-knowledge proofs** - Basic concepts (you don't need deep cryptography knowledge)
 
-Using rustup to install Rust:
+> Learn more about World ID concepts in our [Why It Matters](/why-it-matters) section.
 
-```bash
-rustup toolchain install nightly --allow-downgrade --profile minimal --component clippy
-```
+## Development Tools
 
-### Windows
+### Starkli (Recommended)
 
-Please refer to the [official documentation](https://www.rust-lang.org/tools/install) to set up Rust on Windows.
+Starkli simplifies Starknet development and is recommended for World ID integration.
 
-## Foundry
+#### Installation
 
-Foundry is a smart contract development toolchain that helps you manage dependencies, compile projects, run tests, deploy contracts, and interact with the blockchain via the command line and Solidity scripts.
-
-### MacOS and Linux
-
-To install `foundryup`, open your terminal and run:
-
-```bash
-curl -L https://foundry.paradigm.xyz | bash
-```
-
-To install the nightly version, run:
-
-```bash
-foundryup
-```
-
-### Windows
-
-**Note:** If you're using Windows, you need to install and use Git Bash or WSL as your terminal. foundryup currently doesn't support PowerShell or Command Prompt. Please refer to the [official documentation](https://book.getfoundry.sh/getting-started/installation) for more details.
-
-## Starkli
-
-Starkli allows you to query Starknet and make transactions with ease. It's fast, easy to install, and intuitive to use.
-
-### MacOS and Linux
-
-Install Starkli on MacOS and Linux using the `starkliup` portable script.
-
-Download `starkliup`:
-
+**MacOS and Linux:**
 ```bash
 curl https://get.starkli.sh | sh
-```
-
-Restart the terminal and install Starkli:
-
-```bash
 starkliup
 ```
 
-Restart the terminal and verify that Starkli is installed correctly:
-
-```bash
-starkli --version
-```
-
-### Windows
-
-Starkli installation on Windows requires manually setting up shell completions.
-
-Install Starkli:
-
+**Windows:**
 ```bash
 cargo install --locked --git https://github.com/xJonathanLEI/starkli
 ```
 
-Restart the terminal and verify that Starkli is installed correctly:
-
+#### Verification
 ```bash
 starkli --version
 ```
 
-Set up Starkli's shell completions by following the instructions in the [Starkli documentation](https://github.com/xJonathanLEI/starkli).
+> **Note**: Starkli is recommended but not required. You can also use Starknet Foundry, Protostar, or direct RPC calls.
 
-## Verification
+## Bridge Contract Information
 
-To verify all prerequisites are properly installed, see our [Verification Guide](/verification).
+### Testnet
+- **Contract**: `0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3`
+- **Network**: Starknet Sepolia Testnet
 
-## Next Steps
+### Mainnet
+- Coming soon
 
-With all prerequisites installed, you're ready to:
-
-- **Quick Start**: Follow our [Getting Started](/getting-started) guide for minimal setup commands
-- **Detailed Setup**: Check out the [Complete Setup Guide](/setup) for a comprehensive walkthrough
