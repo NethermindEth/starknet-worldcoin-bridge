@@ -1,8 +1,10 @@
 # Getting Started
 
 This guide shows you how to integrate World ID verification into your Starknet smart contracts.
+> New to World ID? Learn [Why It Matters](/why-it-matters) for your application. Need to set up your development environment first? Check our [Prerequisites](/prerequisites).
 
 ## Step 1: Define the Interface
+The first interface `IGroth16VerifierBN254` defines how to interact with the World ID Bridge contract for proof verification. The second interface `IMyApp` defines your application's public function that will handle the verification process.
 
 ```rust
 use starknet::ContractAddress;
@@ -23,9 +25,11 @@ pub trait IMyApp<TContractState> {
 
 ## Step 2: Integrate in Your Contract
 
+This contract stores the World ID Bridge address in its constructor and implements a `verify_human` function. The function calls the bridge to verify the proof and extracts public inputs including the nullifier hash and signal data for your application logic.
+
 ```rust
 #[starknet::contract]
-mod MyApp {
+pub mod MyApp {
     use starknet::ContractAddress;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use super::{IGroth16VerifierBN254Dispatcher, IGroth16VerifierBN254DispatcherTrait, IMyApp};
@@ -73,11 +77,26 @@ mod MyApp {
 
 ## Step 3: Bridge Contract Addresses
 
+Use these contract addresses to connect your application to the World ID Bridge. The testnet address is for development and testing, while mainnet will be available for production deployments.
+
 ### Testnet
-- **Bridge Contract**: `0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3`
+- **Bridge Contract**: `0x01167d6979330fcc6633111d72416322eb0e3b78ad147a9338abea3c04edfc8a`
 
 ### Mainnet
 - Coming soon
+
+## Proof Formatting
+
+World ID proofs must be formatted with Garaga hints before submission to the bridge. Garaga handles the conversion from standard Groth16 proofs to Starknet-compatible format.
+
+For detailed proof formatting and generation instructions, see the [Garaga Documentation](https://garaga.gitbook.io/garaga/).
+
+### Quick Setup:
+1. Install Garaga: `pip install garaga`
+2. Follow the [Groth16 Verifier guide](https://garaga.gitbook.io/garaga/) for formatting your World ID proofs
+3. Use the formatted proof with the bridge as shown in the examples above
+
+> For production applications, implement [Nullifier Tracking](/verification/nullifier-tracking) to prevent replay attacks and add robust [Error Handling](/verification/error-handling).
 
 ## Key Points
 
