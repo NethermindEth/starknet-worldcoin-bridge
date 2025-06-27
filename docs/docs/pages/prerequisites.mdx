@@ -18,14 +18,15 @@ You should be familiar with:
 Understanding of:
 - **Proof-of-personhood verification** - What World ID provides and why it matters
 - **Zero-knowledge proofs** - Basic concepts (you don't need deep cryptography knowledge)
+- **Nullifier tracking** - Preventing replay attacks in verification systems
 
-> Learn more about World ID concepts in our [Why It Matters](/why-it-matters) section.
+> Learn more about these benefits in our [Why It Matters](/why-it-matters) section.
 
 ## Development Tools
 
 ### Starkli (Recommended)
 
-Starkli simplifies Starknet development and is recommended for World ID integration.
+Starkli simplifies Starknet development and is recommended for World ID integration, though not strictly required.
 
 #### Installation
 
@@ -45,14 +46,30 @@ cargo install --locked --git https://github.com/xJonathanLEI/starkli
 starkli --version
 ```
 
-> **Note**: Starkli is recommended but not required. You can also use Starknet Foundry, Protostar, or direct RPC calls.
+> **Note**: You can integrate World ID using any Starknet development tools or libraries. Starkli is recommended but not required.
+
+### Garaga (Required for Proof Formatting)
+
+World ID proofs must be formatted using Garaga before submission to the bridge.
+
+#### Installation
+```bash
+pip install garaga
+```
+
+#### Requirements
+- Python 3.10 or higher
+- Virtual environment recommended
+
+> For detailed proof formatting instructions, see the [Garaga Documentation](https://garaga.gitbook.io/garaga/).
 
 ## Bridge Contract Information
 
 ### Testnet
-- **Contract**: `0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3`
+- **Contract**: `0x01167d6979330fcc6633111d72416322eb0e3b78ad147a9338abea3c04edfc8a`
 - **Network**: Starknet Sepolia Testnet
 
 ### Mainnet
 - Coming soon
 
+> Ready to start integrating? Continue to our [Getting Started](/getting-started) guide for step-by-step implementation.
