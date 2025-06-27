@@ -1,0 +1,288 @@
+# Integration Testing
+
+Integration testing verifies that your smart contract correctly interfaces with the World ID Bridge and processes proofs as expected. This guide provides practical testing patterns and implementation examples.
+
+## Basic Integration Test
+
+Start with this foundational test to verify your contract can successfully communicate with the World ID Bridge:
+
+```rust
+use starknet::ContractAddress;
+use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+#[starknet::interface]
+pub trait IGroth16VerifierBN254<TContractState> {
+    fn verify_groth16_proof_bn254(
+        self: @TContractState, 
+        full_proof_with_hints: Span<felt252>
+    ) -> Option<Span<u256>>;
+}
+
+#[starknet::interface]
+pub trait IVerificationTest<TContractState> {
+    fn test_bridge_connection(self: @TContractState) -> bool;
+    fn verify_proof_and_count(ref self: TContractState, full_proof_with_hints: Span<felt252>) -> bool;
+    fn get_verification_count(self: @TContractState) -> u32;
+}
+
+#[starknet::contract]
+pub mod VerificationTest {
+    use starknet::ContractAddress;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::{IGroth16VerifierBN254Dispatcher, IGroth16VerifierBN254DispatcherTrait, IVerificationTest};
+
+    #[storage]
+    pub struct Storage {
+        world_id_bridge: ContractAddress,     // Bridge contract address
+        verification_count: u32,              // Track successful verifications
+        bridge_accessible: bool,              // Connection status flag
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    pub enum Event {
+        BridgeConnectionTested: BridgeConnectionTested,
+        ProofVerified: ProofVerified,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct BridgeConnectionTested {
+        pub bridge_address: ContractAddress,
+        pub accessible: bool,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ProofVerified {
+        pub verification_count: u32,
+        pub nullifier_hash: u256,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, world_id_bridge_address: ContractAddress) {
+        // Store the World ID Bridge contract address
+        self.world_id_bridge.write(world_id_bridge_address);
+        self.verification_count.write(0);
+        self.bridge_accessible.write(false);
+    }
+
+    #[abi(embed_v0)]
+    impl VerificationTestImpl of IVerificationTest<ContractState> {
+        /// Test basic connectivity to the World ID Bridge
+        /// Returns true if bridge is accessible and responding
+        fn test_bridge_connection(self: @ContractState) -> bool {
+            let bridge_address = self.world_id_bridge.read();
+            
+            // Create dispatcher to test bridge accessibility
+            let world_id = IGroth16VerifierBN254Dispatcher { 
+                contract_address: bridge_address 
+            };
+
+            // Test with empty proof to verify bridge responds (will fail verification but confirms connectivity)
+            let empty_proof: Array<felt252> = array![];
+            let result = world_id.verify_groth16_proof_bn254(empty_proof.span());
+            
+            // Bridge is accessible if it returns None (expected for invalid proof)
+            let accessible = result.is_none();
+            
+            // Emit connection test event
+            self.emit(Event::BridgeConnectionTested(
+                BridgeConnectionTested { 
+                    bridge_address,
+                    accessible 
+                }
+            ));
+            
+            accessible
+        }
+
+        /// Verify a World ID proof and increment counter on success
+        /// Demonstrates full integration workflow
+        fn verify_proof_and_count(
+            ref self: ContractState, 
+            full_proof_with_hints: Span<felt252>
+        ) -> bool {
+            // Create bridge dispatcher
+            let world_id = IGroth16VerifierBN254Dispatcher { 
+                contract_address: self.world_id_bridge.read() 
+            };
+
+            // Attempt proof verification
+            match world_id.verify_groth16_proof_bn254(full_proof_with_hints) {
+                Option::Some(public_inputs) => {
+                    // Extract public inputs for validation
+                    let _root = *public_inputs.at(0);                    // Merkle tree root
+                    let nullifier_hash = *public_inputs.at(1);          // Unique nullifier
+                    let _signal_hash = *public_inputs.at(2);            // Application signal
+                    let _external_nullifier_hash = *public_inputs.at(3); // Action identifier
+
+                    // Increment successful verification counter
+                    let new_count = self.verification_count.read() + 1;
+                    self.verification_count.write(new_count);
+
+                    // Emit success event with verification details
+                    self.emit(Event::ProofVerified(
+                        ProofVerified { 
+                            verification_count: new_count,
+                            nullifier_hash 
+                        }
+                    ));
+
+                    true
+                },
+                Option::None => {
+                    // Proof verification failed
+                    false
+                }
+            }
+        }
+
+        /// Get total number of successful verifications
+        /// Useful for testing and monitoring
+        fn get_verification_count(self: @ContractState) -> u32 {
+            self.verification_count.read()
+        }
+    }
+}
+```
+
+## Starknet Foundry Test Suite
+
+Create comprehensive tests using Starknet Foundry to validate your integration:
+
+```rust
+use verification_test::VerificationTest;
+use verification_test::{IVerificationTestDispatcher, IVerificationTestDispatcherTrait};
+use snforge_std::{declare, DeclareResultTrait, ContractClassTrait};
+use snforge_std::{EventSpyAssertionsTrait, spy_events};
+use starknet::ContractAddress;
+
+// Test configuration constants
+const WORLD_ID_BRIDGE_TESTNET: felt252 = 0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3;
+
+/// Deploy test contract with World ID Bridge address
+fn deploy_test_contract() -> IVerificationTestDispatcher {
+    let contract = declare("VerificationTest");
+    let bridge_address: ContractAddress = WORLD_ID_BRIDGE_TESTNET.try_into().unwrap();
+    
+    let mut constructor_args = array![];
+    Serde::serialize(@bridge_address, ref constructor_args);
+    
+    let (contract_address, _) = contract
+        .unwrap()
+        .contract_class()
+        .deploy(@constructor_args)
+        .unwrap();
+    
+    IVerificationTestDispatcher { contract_address }
+}
+
+#[test]
+fn test_bridge_connection() {
+    let dispatcher = deploy_test_contract();
+    let mut spy = spy_events();
+
+    // Test bridge connectivity
+    let connection_result = dispatcher.test_bridge_connection();
+    
+    // Bridge should be accessible (returns true even for failed verification)
+    assert(connection_result == true, 'Bridge connection failed');
+
+    // Verify connection test event was emitted
+    let expected_event = VerificationTest::Event::BridgeConnectionTested(
+        VerificationTest::BridgeConnectionTested { 
+            bridge_address: WORLD_ID_BRIDGE_TESTNET.try_into().unwrap(),
+            accessible: true 
+        }
+    );
+    let expected_events = array![(dispatcher.contract_address, expected_event)];
+    spy.assert_emitted(@expected_events);
+}
+
+#[test]
+fn test_invalid_proof_handling() {
+    let dispatcher = deploy_test_contract();
+
+    // Test with invalid proof data
+    let invalid_proof: Array<felt252> = array![123, 456, 789];
+    let result = dispatcher.verify_proof_and_count(invalid_proof.span());
+    
+    // Should return false for invalid proof
+    assert(result == false, 'Invalid proof should fail');
+    
+    // Verification count should remain zero
+    let count = dispatcher.get_verification_count();
+    assert(count == 0, 'Count should be zero');
+}
+
+#[test]
+fn test_verification_counter() {
+    let dispatcher = deploy_test_contract();
+
+    // Initial count should be zero
+    let initial_count = dispatcher.get_verification_count();
+    assert(initial_count == 0, 'Initial count should be zero');
+    
+    // Multiple invalid proof attempts should not increment counter
+    let invalid_proof: Array<felt252> = array![1, 2, 3];
+    dispatcher.verify_proof_and_count(invalid_proof.span());
+    dispatcher.verify_proof_and_count(invalid_proof.span());
+    
+    let count_after_failures = dispatcher.get_verification_count();
+    assert(count_after_failures == 0, 'Count should remain zero');
+}
+
+#[test]
+fn test_empty_proof_handling() {
+    let dispatcher = deploy_test_contract();
+
+    // Test with completely empty proof
+    let empty_proof: Array<felt252> = array![];
+    let result = dispatcher.verify_proof_and_count(empty_proof.span());
+    
+    // Should gracefully handle empty proof
+    assert(result == false, 'Empty proof should fail');
+}
+```
+
+## Integration Validation Checklist
+
+Use this checklist to ensure comprehensive integration testing:
+
+### **Bridge Connectivity**
+- ✅ Contract can create dispatcher to World ID Bridge
+- ✅ Bridge responds to verification requests (even if proof is invalid)
+- ✅ Bridge address is correctly stored and accessible
+- ✅ Network connectivity works for your deployment environment
+
+### **Proof Processing**
+- ✅ Contract correctly calls `verify_groth16_proof_bn254` function
+- ✅ Invalid proofs return `Option::None` as expected
+- ✅ Public inputs are properly extracted when verification succeeds
+- ✅ Contract handles empty or malformed proof data gracefully
+
+### **State Management**
+- ✅ Contract state updates correctly on successful verification
+- ✅ Failed verifications don't modify contract state unexpectedly
+- ✅ Storage reads and writes function as designed
+- ✅ Events are emitted with accurate data
+
+### **Error Handling**
+- ✅ Contract doesn't panic on invalid proof data
+- ✅ Bridge connection failures are handled appropriately
+- ✅ Gas limits are respected during proof verification
+- ✅ Error conditions provide useful debugging information
+
+## Next Steps
+
+Once your basic integration tests pass:
+
+1. **Implement Security Measures**: Add [Nullifier Tracking](/verification/nullifier-tracking) to prevent replay attacks
+2. **Enhance Error Handling**: Implement robust [Error Handling](/verification/error-handling) patterns
+
+## Troubleshooting
+
+**Bridge Connection Issues**: Verify the bridge contract address matches the testnet deployment: `0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3`
+
+**Test Failures**: Check proof format and ensure you're using properly formatted Garaga proofs with hints.
+
+**Event Assertion Errors**: Ensure event structures match exactly between contract and test code.

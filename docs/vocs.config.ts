@@ -21,20 +21,17 @@ export default defineConfig({
     {
       text: 'Guides',
       items: [
-        { text: 'Pre Requisites', link: '/prerequisites' },
-        // { text: 'Bridge Setup', link: '/setup' }, 
+        { text: 'Prerequisites', link: '/prerequisites' },
         {
-    text: 'Verification',
-    collapsed: true,
-    items: [
-        { text: 'Overview', link: '/verification/' },
-        { text: 'Integration Testing', link: '/verification/integration-testing' },
-        { text: 'Nullifier Tracking', link: '/verification/nullifier-tracking' },
-        { text: 'Error Handling', link: '/verification/error-handling' },
-        { text: 'Best Practices', link: '/verification/best-practices' },
-        { text: 'Troubleshooting', link: '/verification/troubleshooting' }
-    ]
-}, 
+          text: 'Verification',
+          collapsed: true,
+          items: [
+            // { text: 'Overview', link: '/verification/' },
+            { text: 'Integration Testing', link: '/verification/integration-testing' },
+            { text: 'Nullifier Tracking', link: '/verification/nullifier-tracking' },
+            { text: 'Error Handling', link: '/verification/error-handling' },
+          ]
+        }, 
       ]
     },
     {

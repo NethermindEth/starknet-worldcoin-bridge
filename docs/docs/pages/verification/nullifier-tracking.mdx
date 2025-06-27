@@ -1,0 +1,106 @@
+# Nullifier Tracking
+
+Prevent users from reusing the same World ID proof with nullifier tracking.
+
+## What Are Nullifiers?
+
+A nullifier is a unique cryptographic hash generated from each World ID proof that serves as your defense against replay attacks and maintains the "one person, one action" guarantee that makes World ID valuable.
+
+Think of a nullifier as a unique fingerprint for each World ID proof. When someone generates a World ID proof for your specific application, part of that proof includes a nullifier - a cryptographic hash that's unique to both the person and your application's action.
+
+Here's what makes nullifiers special:
+- **Unique per person**: Each individual has a different nullifier for the same action
+- **Unique per action**: The same person gets different nullifiers for different actions in your app
+- **Deterministic**: The same person doing the same action always generates the same nullifier
+- **Anonymous**: You can't trace a nullifier back to the person's identity
+- **Perfect for "one person, one action" rules**: Same person + same action = same nullifier
+
+This design means that when someone tries to submit the same proof twice, they'll generate the same nullifier, allowing you to detect and reject the duplicate attempt.
+
+## Why This Matters for Your Application
+
+Without proper nullifier tracking, your application becomes vulnerable to several attack vectors:
+
+**Replay Attacks**: Malicious users could reuse valid proofs multiple times, essentially allowing them to vote multiple times, claim multiple rewards, or bypass other restrictions.
+
+**Sybil Resistance**: The core value proposition of World ID is ensuring one-person-one-action. Without nullifier tracking, this guarantee breaks down.
+
+**Fair Distribution**: Whether you're distributing tokens, voting rights, or access privileges, nullifier tracking ensures fair, equal participation.
+
+## Simple Implementation
+
+Just add one storage field and one function to get started:
+
+```cairo
+use starknet::ContractAddress;
+use starknet::storage::*;
+
+#[starknet::interface]
+pub trait IGroth16VerifierBN254<TContractState> {
+    fn verify_groth16_proof_bn254(
+        self: @TContractState, 
+        full_proof_with_hints: Span<felt252>
+    ) -> Option<Span<u256>>;
+}
+
+#[starknet::contract]
+pub mod MyApp {
+    use starknet::ContractAddress;
+    use starknet::storage::*;
+    use super::{IGroth16VerifierBN254Dispatcher, IGroth16VerifierBN254DispatcherTrait};
+
+    #[storage]
+    pub struct Storage {
+        world_id_bridge: ContractAddress,
+        used_nullifiers: Map<u256, bool>,    // Add this line
+        // Your other storage...
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, world_id_bridge_address: ContractAddress) {
+        self.world_id_bridge.write(world_id_bridge_address);
+    }
+
+    #[generate_trait]
+    impl InternalFunctions of InternalFunctionsTrait {
+        fn _verify_human(ref self: ContractState, proof: Span<felt252>) -> bool {
+            // Call World ID Bridge
+            let world_id = IGroth16VerifierBN254Dispatcher { 
+                contract_address: self.world_id_bridge.read() 
+            };
+
+            match world_id.verify_groth16_proof_bn254(proof) {
+                Option::Some(public_inputs) => {
+                    let nullifier = *public_inputs.at(1);  // Extract nullifier
+                    
+                    if self.used_nullifiers.entry(nullifier).read() {
+                        return false; // Already used
+                    }
+                    
+                    self.used_nullifiers.entry(nullifier).write(true); // Mark as used
+                    true
+                },
+                Option::None => false
+            }
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl MyAppImpl of super::IMyApp<ContractState> {
+        fn claim_reward(ref self: ContractState, proof: Span<felt252>) -> bool {
+            if self._verify_human(proof) {
+                // Give reward - verified and not claimed before
+                true
+            } else {
+                false
+            }
+        }
+    }
+}
+```
+
+That's it! Three key steps:
+1. **Add storage**: `used_nullifiers: Map<u256, bool>`
+2. **Extract nullifier**: `*public_inputs.at(1)`  
+3. **Check and mark**: Prevent reuse, mark as used
+
