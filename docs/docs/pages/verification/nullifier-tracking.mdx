@@ -2,36 +2,27 @@
 
 Prevent users from reusing the same World ID proof with nullifier tracking.
 
-## What Are Nullifiers?
+> This is part of the [Verification Strategy](/verification/strategy) for World ID Bridge integration.
 
-A nullifier is a unique cryptographic hash generated from each World ID proof that serves as your defense against replay attacks and maintains the "one person, one action" guarantee that makes World ID valuable.
+## Understanding Nullifiers
 
-Think of a nullifier as a unique fingerprint for each World ID proof. When someone generates a World ID proof for your specific application, part of that proof includes a nullifier - a cryptographic hash that's unique to both the person and your application's action.
+When someone generates a World ID proof for your app, they also generate a nullifier - basically a unique hash that acts as a fingerprint for that specific proof. Here's what makes nullifiers useful:
 
-Here's what makes nullifiers special:
-- **Unique per person**: Each individual has a different nullifier for the same action
-- **Unique per action**: The same person gets different nullifiers for different actions in your app
-- **Deterministic**: The same person doing the same action always generates the same nullifier
-- **Anonymous**: You can't trace a nullifier back to the person's identity
-- **Perfect for "one person, one action" rules**: Same person + same action = same nullifier
+- Each person gets a different nullifier for the same action
+- The same person gets different nullifiers for different actions
+- The same person doing the same action always produces the same nullifier
+- You can't trace a nullifier back to someone's identity
 
-This design means that when someone tries to submit the same proof twice, they'll generate the same nullifier, allowing you to detect and reject the duplicate attempt.
+This means when someone tries to use the same proof twice, you'll see the exact same nullifier and can reject the duplicate attempt.
+## Security Implications
 
-## Why This Matters for Your Application
+Without proper nullifier tracking, your application faces significant vulnerabilities. Replay attacks allow malicious users to reuse valid proofs multiple times, potentially enabling multiple votes, reward claims, or access attempts. This fundamentally undermines World ID's sybil resistance guarantees and can compromise fair distribution mechanisms in token distributions, voting systems, or access controls.
 
-Without proper nullifier tracking, your application becomes vulnerable to several attack vectors:
+## Implementation
 
-**Replay Attacks**: Malicious users could reuse valid proofs multiple times, essentially allowing them to vote multiple times, claim multiple rewards, or bypass other restrictions.
+Implementing nullifier tracking requires minimal changes to your existing contract structure:
 
-**Sybil Resistance**: The core value proposition of World ID is ensuring one-person-one-action. Without nullifier tracking, this guarantee breaks down.
-
-**Fair Distribution**: Whether you're distributing tokens, voting rights, or access privileges, nullifier tracking ensures fair, equal participation.
-
-## Simple Implementation
-
-Just add one storage field and one function to get started:
-
-```cairo
+```rust
 use starknet::ContractAddress;
 use starknet::storage::*;
 
@@ -52,8 +43,8 @@ pub mod MyApp {
     #[storage]
     pub struct Storage {
         world_id_bridge: ContractAddress,
-        used_nullifiers: Map<u256, bool>,    // Add this line
-        // Your other storage...
+        used_nullifiers: Map<u256, bool>,    // Track used nullifiers
+        // Your existing storage fields...
     }
 
     #[constructor]
@@ -64,20 +55,19 @@ pub mod MyApp {
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
         fn _verify_human(ref self: ContractState, proof: Span<felt252>) -> bool {
-            // Call World ID Bridge
             let world_id = IGroth16VerifierBN254Dispatcher { 
                 contract_address: self.world_id_bridge.read() 
             };
 
             match world_id.verify_groth16_proof_bn254(proof) {
                 Option::Some(public_inputs) => {
-                    let nullifier = *public_inputs.at(1);  // Extract nullifier
+                    let nullifier = *public_inputs.at(1);
                     
                     if self.used_nullifiers.entry(nullifier).read() {
-                        return false; // Already used
+                        return false; // Prevent replay attack
                     }
                     
-                    self.used_nullifiers.entry(nullifier).write(true); // Mark as used
+                    self.used_nullifiers.entry(nullifier).write(true);
                     true
                 },
                 Option::None => false
@@ -89,7 +79,7 @@ pub mod MyApp {
     impl MyAppImpl of super::IMyApp<ContractState> {
         fn claim_reward(ref self: ContractState, proof: Span<felt252>) -> bool {
             if self._verify_human(proof) {
-                // Give reward - verified and not claimed before
+                // Execute verified action
                 true
             } else {
                 false
@@ -99,8 +89,6 @@ pub mod MyApp {
 }
 ```
 
-That's it! Three key steps:
-1. **Add storage**: `used_nullifiers: Map<u256, bool>`
-2. **Extract nullifier**: `*public_inputs.at(1)`  
-3. **Check and mark**: Prevent reuse, mark as used
+The implementation requires three components. A storage mapping to track used nullifiers, extraction of the nullifier from proof verification results, and validation logic that checks for previous use before marking the nullifier as consumed.
 
+For production applications requiring sophisticated error handling and monitoring capabilities, see [Error Handling](/verification/error-handling).

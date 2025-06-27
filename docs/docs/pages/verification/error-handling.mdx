@@ -1,357 +1,141 @@
-# Basic Error Handling
+# Error Handling
 
 Handle verification failures gracefully with clear error messages and proper validation.
 
+*This is part of the [Verification Strategy](/verification/strategy) for World ID Bridge integration.*
+
 ## Why Error Handling Matters
 
-When integrating World ID, verification can fail for various reasons - invalid proofs, network issues, or replay attempts. Without proper error handling, your users get confusing failures and your application becomes unreliable.
+World ID verification can fail for various reasons: invalid proofs, network issues, or replay attempts. Without proper error handling, users get confusing failures and your application becomes unreliable.
 
-**Good error handling provides:**
-- **Clear feedback** for users when verification fails
-- **Debugging information** for developers
-- **Graceful recovery** instead of unexpected crashes
-- **Security protection** against invalid inputs
+Good error handling provides clear feedback for users, debugging information for developers, graceful recovery instead of crashes, and security protection against invalid inputs.
 
-## Error Handling Patterns
+## Basic Implementation
 
-### **Define Clear Error Codes**
+### Define Clear Error Messages
 
-Create organized error messages that are easy to understand and debug:
+Create organized error codes that are easy to understand:
 
 ```cairo
 mod Errors {
-    // Verification errors
     pub const PROOF_VERIFICATION_FAILED: felt252 = 'Proof verification failed';
     pub const INVALID_PROOF_FORMAT: felt252 = 'Invalid proof format';
     pub const EMPTY_PROOF_DATA: felt252 = 'Proof data is empty';
-    
-    // Nullifier errors  
     pub const NULLIFIER_ALREADY_USED: felt252 = 'Nullifier already used';
-    pub const ZERO_NULLIFIER: felt252 = 'Invalid nullifier hash';
-    
-    // Application errors
-    pub const USER_ALREADY_VERIFIED: felt252 = 'User already verified';
-    pub const VERIFICATION_DISABLED: felt252 = 'Verification currently disabled';
 }
 ```
 
-### **Validate Inputs Early**
+### Validate Inputs Early
 
 Check for common issues before attempting verification:
 
 ```cairo
 fn _validate_proof_input(proof: Span<felt252>) -> bool {
-    // Check for empty proof
-    if proof.len() == 0 {
-        assert(false, Errors::EMPTY_PROOF_DATA);
-    }
-    
-    // Validate minimum proof length  
-    if proof.len() < 8 {
-        assert(false, Errors::INVALID_PROOF_FORMAT);
-    }
-    
+    assert(proof.len() > 0, Errors::EMPTY_PROOF_DATA);
+    assert(proof.len() >= 8, Errors::INVALID_PROOF_FORMAT);
     true
 }
 ```
 
-### **Handle Verification Failures**
+### Handle Verification Results
 
-Use pattern matching to handle different verification outcomes:
+Use pattern matching to handle different outcomes:
 
 ```cairo
 fn _verify_human(ref self: ContractState, proof: Span<felt252>) -> bool {
     // Validate input first
     self._validate_proof_input(proof);
     
-    // Attempt verification
     let world_id = IGroth16VerifierBN254Dispatcher { 
         contract_address: self.world_id_bridge.read() 
     };
 
     match world_id.verify_groth16_proof_bn254(proof) {
         Option::Some(public_inputs) => {
-            // Extract nullifier safely
-            if public_inputs.len() < 4 {
-                assert(false, Errors::INVALID_PROOF_FORMAT);
-            }
+            assert(public_inputs.len() >= 4, Errors::INVALID_PROOF_FORMAT);
             
             let nullifier = *public_inputs.at(1);
+            assert(nullifier != 0, 'Invalid nullifier');
+            assert(!self.used_nullifiers.entry(nullifier).read(), Errors::NULLIFIER_ALREADY_USED);
             
-            // Validate nullifier
-            if nullifier == 0 {
-                assert(false, Errors::ZERO_NULLIFIER);
-            }
-            
-            // Check for replay attacks
-            if self.used_nullifiers.entry(nullifier).read() {
-                assert(false, Errors::NULLIFIER_ALREADY_USED);
-            }
-            
-            // Mark as used and succeed
             self.used_nullifiers.entry(nullifier).write(true);
             true
         },
         Option::None => {
-            // Verification failed
             assert(false, Errors::PROOF_VERIFICATION_FAILED);
         }
     }
 }
 ```
 
-## Complete Example
+## Simple Example
 
-Here's a World ID verification contract with comprehensive error handling:
+Here's a basic World ID contract with error handling:
 
 ```cairo
-use starknet::ContractAddress;
-
 #[starknet::interface]
-pub trait IGroth16VerifierBN254<TContractState> {
-    fn verify_groth16_proof_bn254(
-        self: @TContractState, 
-        full_proof_with_hints: Span<felt252>
-    ) -> Option<Span<u256>>;
-}
-
-#[starknet::interface]
-pub trait ISecureWorldIDApp<TContractState> {
-    fn verify_and_execute(ref self: TContractState, proof: Span<felt252>) -> bool;
-    fn is_user_verified(self: @TContractState, user: ContractAddress) -> bool;
-    fn toggle_verification(ref self: TContractState, enabled: bool);
+pub trait IMyWorldIDApp<TContractState> {
+    fn claim_reward(ref self: TContractState, proof: Span<felt252>) -> bool;
 }
 
 mod Errors {
-    // Verification errors
     pub const PROOF_VERIFICATION_FAILED: felt252 = 'Proof verification failed';
     pub const INVALID_PROOF_FORMAT: felt252 = 'Invalid proof format';
     pub const EMPTY_PROOF_DATA: felt252 = 'Proof data is empty';
-    
-    // Nullifier errors  
     pub const NULLIFIER_ALREADY_USED: felt252 = 'Nullifier already used';
-    pub const ZERO_NULLIFIER: felt252 = 'Invalid nullifier hash';
-    
-    // Application errors
-    pub const USER_ALREADY_VERIFIED: felt252 = 'User already verified';
-    pub const VERIFICATION_DISABLED: felt252 = 'Verification currently disabled';
-    pub const UNAUTHORIZED_ACCESS: felt252 = 'Unauthorized access';
 }
 
 #[starknet::contract]
-pub mod SecureWorldIDApp {
-    use starknet::{ContractAddress, get_caller_address};
+pub mod MyWorldIDApp {
+    use starknet::ContractAddress;
     use starknet::storage::*;
-    use super::{Errors, IGroth16VerifierBN254Dispatcher, IGroth16VerifierBN254DispatcherTrait, ISecureWorldIDApp};
+    use super::{Errors, IMyWorldIDApp};
 
     #[storage]
     pub struct Storage {
         world_id_bridge: ContractAddress,
         used_nullifiers: Map<u256, bool>,
-        verified_users: Map<ContractAddress, bool>,
-        verification_enabled: bool,
-        owner: ContractAddress,
-    }
-
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    pub enum Event {
-        UserVerified: UserVerified,
-        VerificationFailed: VerificationFailed,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct UserVerified {
-        pub user: ContractAddress,
-        pub nullifier_hash: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct VerificationFailed {
-        pub user: ContractAddress,
-        pub error: felt252,
     }
 
     #[constructor]
     fn constructor(ref self: ContractState, world_id_bridge_address: ContractAddress) {
-        assert(world_id_bridge_address.into() != 0, 'Invalid bridge address');
-        
         self.world_id_bridge.write(world_id_bridge_address);
-        self.verification_enabled.write(true);
-        self.owner.write(get_caller_address());
-    }
-
-    #[abi(embed_v0)]
-    impl SecureWorldIDAppImpl of ISecureWorldIDApp<ContractState> {
-        fn verify_and_execute(ref self: ContractState, proof: Span<felt252>) -> bool {
-            let caller = get_caller_address();
-            
-            // Check if verification is enabled
-            if !self.verification_enabled.read() {
-                self._emit_verification_failed(caller, Errors::VERIFICATION_DISABLED);
-                assert(false, Errors::VERIFICATION_DISABLED);
-            }
-            
-            // Check if user is already verified
-            if self.verified_users.entry(caller).read() {
-                self._emit_verification_failed(caller, Errors::USER_ALREADY_VERIFIED);
-                assert(false, Errors::USER_ALREADY_VERIFIED);
-            }
-            
-            // Attempt verification with error handling
-            match self._safe_verify_human(proof) {
-                true => {
-                    // Mark user as verified
-                    self.verified_users.entry(caller).write(true);
-                    true
-                },
-                false => false
-            }
-        }
-
-        fn is_user_verified(self: @ContractState, user: ContractAddress) -> bool {
-            self.verified_users.entry(user).read()
-        }
-
-        fn toggle_verification(ref self: ContractState, enabled: bool) {
-            let caller = get_caller_address();
-            assert(caller == self.owner.read(), Errors::UNAUTHORIZED_ACCESS);
-            
-            self.verification_enabled.write(enabled);
-        }
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
         fn _validate_proof_input(self: @ContractState, proof: Span<felt252>) -> bool {
-            // Check for empty proof
-            if proof.len() == 0 {
-                assert(false, Errors::EMPTY_PROOF_DATA);
-            }
-            
-            // Validate minimum proof length (Garaga proofs need multiple components)
-            if proof.len() < 8 {
-                assert(false, Errors::INVALID_PROOF_FORMAT);
-            }
-            
+            assert(proof.len() > 0, Errors::EMPTY_PROOF_DATA);
+            assert(proof.len() >= 8, Errors::INVALID_PROOF_FORMAT);
             true
         }
 
-        fn _safe_verify_human(ref self: ContractState, proof: Span<felt252>) -> bool {
-            let caller = get_caller_address();
-            
-            // Validate input first
+        fn _verify_human(ref self: ContractState, proof: Span<felt252>) -> bool {
             self._validate_proof_input(proof);
             
-            // Get bridge dispatcher
-            let world_id = IGroth16VerifierBN254Dispatcher { 
-                contract_address: self.world_id_bridge.read() 
-            };
-
-            // Attempt verification with proper error handling
-            match world_id.verify_groth16_proof_bn254(proof) {
-                Option::Some(public_inputs) => {
-                    // Validate public inputs format
-                    if public_inputs.len() < 4 {
-                        self._emit_verification_failed(caller, Errors::INVALID_PROOF_FORMAT);
-                        assert(false, Errors::INVALID_PROOF_FORMAT);
-                    }
-                    
-                    // Extract nullifier safely
-                    let nullifier = *public_inputs.at(1);
-                    
-                    // Validate nullifier
-                    if nullifier == 0 {
-                        self._emit_verification_failed(caller, Errors::ZERO_NULLIFIER);
-                        assert(false, Errors::ZERO_NULLIFIER);
-                    }
-                    
-                    // Check for replay attacks
-                    if self.used_nullifiers.entry(nullifier).read() {
-                        self._emit_verification_failed(caller, Errors::NULLIFIER_ALREADY_USED);
-                        assert(false, Errors::NULLIFIER_ALREADY_USED);
-                    }
-                    
-                    // Mark nullifier as used
-                    self.used_nullifiers.entry(nullifier).write(true);
-                    
-                    // Emit success event
-                    self.emit(Event::UserVerified(UserVerified { 
-                        user: caller, 
-                        nullifier_hash: nullifier 
-                    }));
-                    
-                    true
-                },
-                Option::None => {
-                    // Verification failed
-                    self._emit_verification_failed(caller, Errors::PROOF_VERIFICATION_FAILED);
-                    assert(false, Errors::PROOF_VERIFICATION_FAILED);
-                }
-            }
+            // Add your verification logic here
+            // This is where you'd call the World ID Bridge
+            
+            true // Simplified for example
         }
+    }
 
-        fn _emit_verification_failed(ref self: ContractState, user: ContractAddress, error: felt252) {
-            self.emit(Event::VerificationFailed(VerificationFailed { 
-                user, 
-                error 
-            }));
+    #[abi(embed_v0)]
+    impl MyWorldIDAppImpl of IMyWorldIDApp<ContractState> {
+        fn claim_reward(ref self: ContractState, proof: Span<felt252>) -> bool {
+            if self._verify_human(proof) {
+                // Execute your application logic
+                true
+            } else {
+                false
+            }
         }
     }
 }
 ```
 
-## Error Handling Best Practices
+## Key Points
 
-### **Use Assert for Validation**
-```cairo
-// Good: Clear validation with meaningful error
-assert(proof.len() > 0, Errors::EMPTY_PROOF_DATA);
+Validate inputs before expensive operations, use descriptive error messages with `assert`, check array bounds before accessing elements, and handle both success and failure cases in your verification logic.
 
-// Bad: Generic or unclear error
-assert(proof.len() > 0, 'error');
-```
-
-### **Emit Events for Debugging**
-```cairo
-// Always emit events for important failures
-self.emit(Event::VerificationFailed(VerificationFailed { 
-    user: caller, 
-    error: Errors::PROOF_VERIFICATION_FAILED 
-}));
-```
-
-### **Validate Early and Often**
-```cairo
-// Check conditions before expensive operations
-if !self.verification_enabled.read() {
-    assert(false, Errors::VERIFICATION_DISABLED);
-}
-
-// Then proceed with verification
-let result = world_id.verify_groth16_proof_bn254(proof);
-```
-
-### **Handle Edge Cases**
-```cairo
-// Always check array bounds
-if public_inputs.len() < 4 {
-    assert(false, Errors::INVALID_PROOF_FORMAT);
-}
-
-// Validate extracted values
-let nullifier = *public_inputs.at(1);
-if nullifier == 0 {
-    assert(false, Errors::ZERO_NULLIFIER);
-}
-```
-
-## Common Error Scenarios
-
-- **Empty or Invalid Proofs**: Always validate proof data before processing
-- **Bridge Connection Issues**: Verify bridge contract addresses and accessibility  
-- **Nullifier Collisions**: Implement proper nullifier tracking and replay prevention
-- **User State Conflicts**: Check if users are already verified before processing
-- **System State Issues**: Validate that verification is enabled and properly configured
-
-With proper error handling, your World ID integration becomes robust, user-friendly, and maintainable. Users get clear feedback when things go wrong, and developers can quickly identify and fix issues.
+For more advanced verification patterns, see [Nullifier Tracking](/verification/nullifier-tracking).

@@ -27,6 +27,7 @@ export default defineConfig({
           collapsed: true,
           items: [
             // { text: 'Overview', link: '/verification/' },
+            { text: 'Strategy', link: '/verification/strategy' },
             { text: 'Integration Testing', link: '/verification/integration-testing' },
             { text: 'Nullifier Tracking', link: '/verification/nullifier-tracking' },
             { text: 'Error Handling', link: '/verification/error-handling' },

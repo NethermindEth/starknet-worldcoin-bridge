@@ -2,6 +2,8 @@
 
 Integration testing verifies that your smart contract correctly interfaces with the World ID Bridge and processes proofs as expected. This guide provides practical testing patterns and implementation examples.
 
+> This is part of the [Verification Strategy](/verification/strategy) for World ID Bridge integration.
+
 ## Basic Integration Test
 
 Start with this foundational test to verify your contract can successfully communicate with the World ID Bridge:
@@ -77,9 +79,9 @@ pub mod VerificationTest {
                 contract_address: bridge_address 
             };
 
-            // Test with empty proof to verify bridge responds (will fail verification but confirms connectivity)
-            let empty_proof: Array<felt252> = array![];
-            let result = world_id.verify_groth16_proof_bn254(empty_proof.span());
+            // Test with malformed proof to verify bridge responds (will fail verification but confirms connectivity)
+            let test_proof: Array<felt252> = array![999, 888, 777];
+            let result = world_id.verify_groth16_proof_bn254(test_proof.span());
             
             // Bridge is accessible if it returns None (expected for invalid proof)
             let accessible = result.is_none();
@@ -149,7 +151,7 @@ pub mod VerificationTest {
 
 Create comprehensive tests using Starknet Foundry to validate your integration:
 
-```rust
+```cairo
 use verification_test::VerificationTest;
 use verification_test::{IVerificationTestDispatcher, IVerificationTestDispatcherTrait};
 use snforge_std::{declare, DeclareResultTrait, ContractClassTrait};
@@ -157,7 +159,7 @@ use snforge_std::{EventSpyAssertionsTrait, spy_events};
 use starknet::ContractAddress;
 
 // Test configuration constants
-const WORLD_ID_BRIDGE_TESTNET: felt252 = 0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3;
+const WORLD_ID_BRIDGE_TESTNET: felt252 = 0x01167d6979330fcc6633111d72416322eb0e3b78ad147a9338abea3c04edfc8a;
 
 /// Deploy test contract with World ID Bridge address
 fn deploy_test_contract() -> IVerificationTestDispatcher {
@@ -244,45 +246,26 @@ fn test_empty_proof_handling() {
 }
 ```
 
-## Integration Validation Checklist
+## Validation Framework
 
-Use this checklist to ensure comprehensive integration testing:
+Your integration testing should cover four critical areas to ensure production readiness. Bridge connectivity testing verifies that your contract can establish a connection to the World ID Bridge, properly store the bridge address, and receive responses from verification requests regardless of proof validity. This establishes the foundational communication layer.
 
-### **Bridge Connectivity**
-- ✅ Contract can create dispatcher to World ID Bridge
-- ✅ Bridge responds to verification requests (even if proof is invalid)
-- ✅ Bridge address is correctly stored and accessible
-- ✅ Network connectivity works for your deployment environment
+Proof processing validation ensures your contract correctly invokes the `verify_groth16_proof_bn254` function, handles the expected `Option::None` responses for invalid proofs, properly extracts public inputs when verification succeeds, and gracefully manages malformed or empty proof data without causing contract failures.
 
-### **Proof Processing**
-- ✅ Contract correctly calls `verify_groth16_proof_bn254` function
-- ✅ Invalid proofs return `Option::None` as expected
-- ✅ Public inputs are properly extracted when verification succeeds
-- ✅ Contract handles empty or malformed proof data gracefully
+State management testing confirms that successful verifications update contract state as designed, failed verifications leave state unchanged, storage operations function correctly, and events emit with accurate verification data. This ensures your contract maintains data integrity across all scenarios.
 
-### **State Management**
-- ✅ Contract state updates correctly on successful verification
-- ✅ Failed verifications don't modify contract state unexpectedly
-- ✅ Storage reads and writes function as designed
-- ✅ Events are emitted with accurate data
+Error handling verification demonstrates that your contract handles invalid proof data without panicking, manages bridge connection failures appropriately, respects gas limits during verification operations, and provides meaningful debugging information for troubleshooting production issues.
 
-### **Error Handling**
-- ✅ Contract doesn't panic on invalid proof data
-- ✅ Bridge connection failures are handled appropriately
-- ✅ Gas limits are respected during proof verification
-- ✅ Error conditions provide useful debugging information
+For more advanced verification patterns, see [Nullifier Tracking](/verification/nullifier-tracking) and [Error Handling](/verification/error-handling).
 
-## Next Steps
-
-Once your basic integration tests pass:
-
-1. **Implement Security Measures**: Add [Nullifier Tracking](/verification/nullifier-tracking) to prevent replay attacks
-2. **Enhance Error Handling**: Implement robust [Error Handling](/verification/error-handling) patterns
-
+---
+:::note
+These examples require Starknet Foundry for testing. While not strictly necessary for DApp development, it provides comprehensive testing capabilities for smart contract verification.
+::::
 ## Troubleshooting
 
-**Bridge Connection Issues**: Verify the bridge contract address matches the testnet deployment: `0x05d5fbb9d968eb019d9066dd5a92d589fc56f0f45b9301afd3a29b3b79476dd3`
+- **Bridge Connection Issues**: Verify the bridge contract address matches the testnet deployment: `0x01167d6979330fcc6633111d72416322eb0e3b78ad147a9338abea3c04edfc8a`
 
-**Test Failures**: Check proof format and ensure you're using properly formatted Garaga proofs with hints.
+- **Test Failures**: Check proof format and ensure you're using properly formatted Garaga proofs with hints.
 
-**Event Assertion Errors**: Ensure event structures match exactly between contract and test code.
+- **Event Assertion Errors**: Ensure event structures match exactly between contract and test code.
