@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'state-bridge'
+    static_configs:
+      - targets: ['state-bridge-relay:9091']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    labels:
+      service: 'state_bridge'
+      environment: 'production' 

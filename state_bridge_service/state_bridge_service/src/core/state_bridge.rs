@@ -198,7 +198,7 @@ where
                 tokio::try_join!(listener_handle, executor_handle, monitor_handle)?;
             }
             None => {
-                tokio::try_join!(listener_handle, executor_handle)?;
+        tokio::try_join!(listener_handle, executor_handle)?;
             }
         }
 

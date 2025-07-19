@@ -37,5 +37,8 @@ COPY --from=builder /app/target/release/state_bridge_relay /usr/local/bin/state_
 RUN useradd -m appuser
 USER appuser
 
+# Expose the Prometheus metrics port
+EXPOSE 9091
+
 ENTRYPOINT ["/usr/local/bin/state_bridge_relay"]
 CMD ["--network" ,"sepolia", "--fee", "estimate"] 

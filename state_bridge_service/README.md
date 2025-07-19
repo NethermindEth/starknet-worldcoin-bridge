@@ -6,10 +6,16 @@
 To build the Docker image manually:
 
 ```bash
-docker build
+docker build -t state-bridge-relay .
+
+# Build and run
+docker compose up -d
+
+# Shutdown
+docker compose down
 ```
 
-### Running with Docker Compose
+**Metrics available at**: `http://localhost:9091/metrics`
 
 To run the docker image:
 
@@ -23,7 +29,8 @@ docker compose up
 docker compose up -d 
 ```
 
-### Shutdown docker image:
+**Access URLs:**
+- **State Bridge Metrics**: `http://localhost:9091/metrics`
 
 ```bash
 docker compose down
@@ -72,27 +79,3 @@ The balance monitoring system will:
 - Log balance changes and polling duration
 - Export metrics for external monitoring
 - Maintain historical balance data
-
-### Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Ethereum L1   │◄──►│  State Bridge    │◄──►│   Starknet L2   │
-│                 │    │    Service       │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                      ┌──────────────────┐
-                      │   Telemetry      │
-                      │   - Balance      │
-                      │   - Metrics      │
-                      │   - History      │
-                      └──────────────────┘
-                              │
-                              ▼
-                      ┌──────────────────┐
-                      │   Prometheus     │
-                      │   Metrics API    │
-                      │   :9091/metrics  │
-                      └──────────────────┘
-```
