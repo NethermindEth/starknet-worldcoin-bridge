@@ -1,0 +1,67 @@
+# Complete monitoring stack for State Bridge Service
+version: '3.9'
+
+services:
+  state-bridge-relay:
+    build: .
+    env_file: .env
+    image: state-bridge-relay:latest
+    container_name: state-bridge-relay
+    environment:
+      RUST_LOG: info
+    ports:
+      - "9091:9091"  # Expose Prometheus metrics port
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+    networks:
+      - monitoring
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/state_bridge_relay", "--healthcheck"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data: 

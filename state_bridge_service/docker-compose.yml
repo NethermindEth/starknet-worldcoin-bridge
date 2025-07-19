@@ -9,7 +9,8 @@ services:
     container_name: state-bridge-relay
     environment:
       RUST_LOG: info
-
+    ports:
+      - "9091:9091"  # Expose Prometheus metrics port
     restart: unless-stopped
     volumes:
       - ./config:/app/config
