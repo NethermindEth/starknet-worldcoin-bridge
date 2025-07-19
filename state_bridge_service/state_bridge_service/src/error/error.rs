@@ -23,6 +23,8 @@ where
     TransactionError(#[from] TransactionError<M>),
     #[error("Gas Limit Exceeded error")]
     GasLimitError(U256),
+    #[error("Telemetry initialization error: {0}")]
+    TelemetryInitError(String),
 }
 
 #[derive(Error, Debug)]

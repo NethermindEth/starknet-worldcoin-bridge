@@ -8,8 +8,12 @@ use crate::config::{
 };
 use crate::core::transaction::{self, check_gas_limit};
 use crate::error::error::StateBridgeError;
+use crate::telemetry::{
+    BalanceMonitor, Metrics, MetricsExporter, TelemetryConfig,
+};
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use ethers::contract::EthEvent;
 use ethers::providers::{Middleware, PubsubClient, StreamExt};
@@ -27,6 +31,9 @@ where
 {
     config: Arc<Config<M, T>>,
     bridge_config: BridgeConfig,
+    telemetry_config: Option<TelemetryConfig>,
+    metrics: Option<Metrics>,
+    _metrics_exporter: Option<MetricsExporter>,
 }
 
 impl<M, T> StateBridge<M, T>
@@ -45,6 +52,9 @@ where
         Ok(Self {
             config: config.into(),
             bridge_config: Default::default(),
+            telemetry_config: None,
+            metrics: None,
+            _metrics_exporter: None,
         })
     }
 
@@ -52,11 +62,33 @@ where
         Ok(Self {
             config: config.into(),
             bridge_config: Default::default(),
+            telemetry_config: None,
+            metrics: None,
+            _metrics_exporter: None,
         })
+    }
+
+    /// Enable telemetry with the given configuration
+    pub async fn with_telemetry(mut self, telemetry_config: TelemetryConfig) -> Result<Self, StateBridgeError<M>> {
+        match crate::telemetry::init_telemetry(telemetry_config.clone()).await {
+            Ok((exporter, metrics)) => {
+                self.telemetry_config = Some(telemetry_config);
+                self.metrics = Some(metrics);
+                self._metrics_exporter = Some(exporter);
+                tracing::info!("Telemetry enabled successfully");
+                Ok(self)
+            }
+            Err(e) => {
+                tracing::error!("Failed to initialize telemetry: {}", e);
+                Err(StateBridgeError::TelemetryInitError(e.to_string()))
+            }
+        }
     }
 
     #[instrument(skip(self))]
     pub async fn propagate_root(&self, value: U256) -> Result<(), StateBridgeError<M>> {
+        let tx_start = Instant::now();
+
         let calldata = abi::abi::ISTATEBRIDGE_ABI
             .function("propagateRoot")?
             .encode_input(&[])?;
@@ -72,20 +104,41 @@ where
         .await?;
 
         let gas_limit = *tx.gas().unwrap();
-        if check_gas_limit(gas_limit) {
-            transaction::sign_and_send_transaction(
+        let mut transaction_success = false;
+        let mut gas_used: Option<u64> = None;
+
+        let result = if check_gas_limit(gas_limit) {
+            match transaction::sign_and_send_transaction(
                 tx,
                 &self.config.wallet(),
                 self.bridge_config.block_confirmations,
                 self.config.l1_provider(),
             )
-            .await?;
+            .await
+            {
+                Ok(receipt) => {
+                    transaction_success = true;
+                    gas_used = receipt.gas_used.map(|g| g.as_u64());
+                    Ok(())
+                }
+                Err(e) => {
+                    transaction_success = false;
+                    Err(StateBridgeError::TransactionError(e))
+                }
+            }
         } else {
             tracing::info!("Default gas limit exceeded");
-            return Err(StateBridgeError::GasLimitError(gas_limit));
+            transaction_success = false;
+            Err(StateBridgeError::GasLimitError(gas_limit))
+        };
+
+        // Record transaction metrics if telemetry is enabled
+        if let Some(metrics) = &self.metrics {
+            let tx_duration = tx_start.elapsed().as_secs_f64();
+            metrics.record_transaction(transaction_success, gas_used, tx_duration);
         }
 
-        Ok(())
+        result
     }
 }
 
@@ -100,6 +153,25 @@ where
     where
         T: StarknetJsonRpcTransport + Send + Sync,
     {
+        // Start balance monitoring if telemetry is enabled
+        let balance_monitor_handle = if let (Some(telemetry_config), Some(metrics)) = 
+            (&self.telemetry_config, &self.metrics) {
+            let balance_monitor = Arc::new(BalanceMonitor::new(
+                self.config.clone(),
+                telemetry_config.clone(),
+                metrics.clone(),
+            ));
+            
+            let monitor = balance_monitor.clone();
+            Some(tokio::spawn(async move {
+                if let Err(e) = monitor.start().await {
+                    tracing::error!("Balance monitor exited: {:#}", e);
+                }
+            }))
+        } else {
+            None
+        };
+
         let (tx, rx) = mpsc::channel::<TreeChanged>(1);
 
         let listener_handle = {
@@ -120,7 +192,15 @@ where
             })
         };
 
-        tokio::try_join!(listener_handle, executor_handle)?;
+        // Join all handles
+        match balance_monitor_handle {
+            Some(monitor_handle) => {
+                tokio::try_join!(listener_handle, executor_handle, monitor_handle)?;
+            }
+            None => {
+                tokio::try_join!(listener_handle, executor_handle)?;
+            }
+        }
 
         Ok(())
     }
