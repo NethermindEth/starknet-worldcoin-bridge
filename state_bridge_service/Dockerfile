@@ -23,7 +23,7 @@ COPY ./state_bridge_service ./state_bridge_service
 RUN mkdir -p /app/config
 
 # Run the binary
-RUN cargo build --release --bin state_bridge_relay 
+RUN cargo build --release --bin state_bridge_relay --features debug
 
 # Run Image
 FROM debian:bookworm-slim
