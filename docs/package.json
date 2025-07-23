@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vocs dev",
     "build": "vocs build",
-    "preview": "vocs preview",
-    "setup": "rm -f pnpm-lock.yaml && pnpm install",
-    "prebuild": "pnpm install --no-frozen-lockfile && pnpm dlx playwright install chromium --with-deps"
+    "preview": "vocs preview"
   },
   "dependencies": {
     "lucide-react": "^0.525.0",
@@ -17,7 +15,6 @@
     "vocs": "latest"
   },
   "devDependencies": {
-    "@playwright/test": "^1.42.1",
     "@types/react": "latest",
     "typescript": "latest"
   },

@@ -1,6 +1,5 @@
 {
-  "buildCommand": "cd docs && rm -f pnpm-lock.yaml && pnpm install && pnpm run build",
-  "installCommand": "cd docs && pnpm install --no-frozen-lockfile",
+  "buildCommand": "cd docs && pnpm install --no-frozen-lockfile && pnpm exec playwright install chromium && pnpm run build",
   "outputDirectory": "docs/dist",
   "framework": "vite"
 }
