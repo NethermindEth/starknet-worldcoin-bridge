@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vocs dev",
     "build": "vocs build",
-    "preview": "vocs preview"
+    "preview": "vocs preview",
+    "prebuild": "npx playwright install chromium --with-deps"
   },
   "dependencies": {
     "lucide-react": "^0.525.0",

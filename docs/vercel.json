@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd docs && pnpm install && pnpm run build",
+  "installCommand": "cd docs && pnpm install",
+  "framework": "vite"
+}
