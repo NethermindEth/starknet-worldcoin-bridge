@@ -12,10 +12,14 @@ pub struct MetricsExporter {
 impl MetricsExporter {
     /// Create and start a new metrics exporter
     pub async fn new(bind_address: String) -> eyre::Result<Self> {
-        let addr: SocketAddr = bind_address.parse()
+        let addr: SocketAddr = bind_address
+            .parse()
             .map_err(|e| eyre::eyre!("Invalid bind address '{}': {}", bind_address, e))?;
 
-        info!("Setting up Prometheus metrics exporter on http://{}/metrics", addr);
+        info!(
+            "Setting up Prometheus metrics exporter on http://{}/metrics",
+            addr
+        );
 
         // Set up the Prometheus exporter with custom configuration
         let builder = PrometheusBuilder::new()
@@ -27,7 +31,10 @@ impl MetricsExporter {
             .install()
             .map_err(|e| eyre::eyre!("Failed to install Prometheus exporter: {}", e))?;
 
-        info!("Prometheus metrics server started on http://{}/metrics", addr);
+        info!(
+            "Prometheus metrics server started on http://{}/metrics",
+            addr
+        );
         debug!("Metrics handle: {:?}", handle);
 
         Ok(Self {
@@ -85,11 +92,11 @@ impl HealthStatus {
 
 /// Utility function to get current metrics as text (for debugging)
 pub async fn get_metrics_text() -> String {
-    use prometheus::{TextEncoder, gather};
-    
+    use prometheus::{gather, TextEncoder};
+
     let encoder = TextEncoder::new();
     let metric_families = gather();
-    
+
     match encoder.encode_to_string(&metric_families) {
         Ok(text) => text,
         Err(e) => {
@@ -97,4 +104,4 @@ pub async fn get_metrics_text() -> String {
             format!("# Error encoding metrics: {}\n", e)
         }
     }
-} 
+}

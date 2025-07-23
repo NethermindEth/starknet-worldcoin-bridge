@@ -92,10 +92,8 @@ where
                 let gas_price_gwei = gas_price.map(wei_to_gwei);
 
                 // Update metrics
-                self.metrics.record_balance_poll_success(
-                    poll_duration,
-                    l1_balance_eth,
-                );
+                self.metrics
+                    .record_balance_poll_success(poll_duration, l1_balance_eth);
 
                 if let Some(gp) = gas_price_gwei {
                     self.metrics.update_gas_price(gp);
@@ -108,15 +106,12 @@ where
                 match gas_price_gwei {
                     Some(gp) => info!(
                         "Balance poll successful: L1={:.6} ETH, Gas={:.6} Gwei, Duration={:.3}s",
-                        l1_balance_eth,
-                        gp,
-                        poll_duration
+                        l1_balance_eth, gp, poll_duration
                     ),
                     None => info!(
                         "Balance poll successful: L1={:.6} ETH, Gas=FAILED, Duration={:.3}s",
-                        l1_balance_eth,
-                        poll_duration
-                    )
+                        l1_balance_eth, poll_duration
+                    ),
                 }
             }
             Err(e) => {
@@ -139,8 +134,7 @@ where
         let balance_future = provider.get_balance(wallet_address, None);
         let gas_price_future = provider.get_gas_price();
 
-        let (balance_result, gas_price_result) =
-            tokio::join!(balance_future, gas_price_future);
+        let (balance_result, gas_price_result) = tokio::join!(balance_future, gas_price_future);
 
         let balance = balance_result.map_err(|e| {
             warn!("Failed to get L1 balance: {}", e);
@@ -151,7 +145,7 @@ where
             Ok(gp) => {
                 // info!("Gas price fetched successfully: {} wei ({:.6} Gwei)", gp, wei_to_gwei(gp));
                 Some(gp)
-            },
+            }
             Err(e) => {
                 error!("Failed to get gas price: {}", e);
                 None
@@ -162,8 +156,6 @@ where
 
         Ok((balance, gas_price))
     }
-
-
 
     /// Get balance history for analysis
     pub async fn get_balance_history(&self, count: Option<usize>) -> Vec<BalanceSnapshot> {
@@ -207,4 +199,4 @@ fn wei_to_gwei(wei: U256) -> f64 {
     let gwei_divisor = U256::from(10).pow(9.into());
     let gwei_value = wei.as_u128() as f64 / gwei_divisor.as_u128() as f64;
     gwei_value
-} 
+}
