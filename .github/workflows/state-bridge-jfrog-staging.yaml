@@ -56,7 +56,5 @@ jobs:
           tags: |
             ${{ env.DOCKER_REGISTRY }}/${{ env.JFROG_REPOSITORY }}/${{ env.AGENT_NAME }}:${{ github.sha }}
             ${{ env.DOCKER_REGISTRY }}/${{ env.JFROG_REPOSITORY }}/${{ env.AGENT_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             GITHUB_SHA=${{ github.sha }}
