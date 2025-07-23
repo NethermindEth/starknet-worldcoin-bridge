@@ -1,14 +1,223 @@
 # L1 Components
 
-This page details the Ethereum (L1) side components of the Starknet World ID Bridge.
+The L1 component serves as the foundational layer for World ID's cross-chain infrastructure, centered around the `StarkStateBridge` contract. This sophisticated bridging mechanism establishes a secure, permissionless pathway for World ID's identity merkle tree state to reach Starknet's execution environment. 
 
-## Coming Soon
+By interfacing directly with Worldcoin's canonical World ID Identity Manager, the bridge ensures that Starknet applications have access to the same cryptographic guarantees and proof-of-personhood capabilities that exist on Ethereum mainnet. The architecture leverages Starknet's native L1-L2 messaging protocol, providing developers with a robust foundation for building identity-aware applications that maintain the highest standards of security and decentralization.
 
-This section will cover:
+## Architecture
+```mermaid
+graph TB
+    subgraph "World ID Ecosystem"
+        WIM(World ID Identity Manager)
+    end
+    
+    subgraph "Bridge Components"
+        SSB(StarkStateBridge Contract)
+        SNC(Starknet Core Contract)
+    end
+    
+    subgraph "L2 Starknet"
+        SWI(StarkWorldID Contract)
+    end
+    
+    subgraph "External Actors"
+        REL(Relayer Service)
+        OWNER(Contract Owner)
+        USERS(External Callers)
+    end
+    
+    WIM -.-> SSB
+    SSB --> SNC
+    SNC --> SWI
+    
+    REL --> SSB
+    OWNER --> SSB
+    USERS --> SSB
+    
+    style WIM fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style SSB fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style SWI fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style SNC fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    style REL fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
+    style OWNER fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
+    style USERS fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
+```
 
-- StarkStateBridge contract
-- World ID Manager integration
-- State propagation mechanisms
-- Gas optimization strategies
+## StarkStateBridge Contract
 
+The `StarkStateBridge` contract represents the cornerstone of World ID's Starknet integration, implementing a sophisticated state synchronization mechanism that maintains cryptographic continuity between Ethereum and Starknet. This contract inherits from OpenZeppelin's battle-tested `Ownable` implementation for granular access control and implements the `IRootHistory` interface to provide standardized root lifecycle management.
 
+The design philosophy prioritizes both security and accessibility—while critical configuration functions require administrative privileges, the core bridging functionality remains permissionless, enabling any actor to facilitate root propagation and ensuring the system's resilience against operational dependencies.
+
+### Storage Layout
+
+The contract's storage architecture is designed for operational efficiency and security, maintaining essential state variables that coordinate cross-chain operations:
+
+- **L2 contract address**: The canonical Starknet World ID contract address, stored in Starknet's native felt252 format to ensure seamless cross-chain addressing
+- **World ID Identity Manager**: Reference to Worldcoin's authoritative identity manager contract on Ethereum, serving as the single source of truth for global identity state
+- **Starknet Core Contract**: Address of Starknet's official messaging contract, providing the cryptographic bridge for secure L1-L2 communication
+- **Fee limits**: Sophisticated cost control mechanisms that prevent economic attacks while maintaining operational flexibility through configurable thresholds
+- **Default fee limit**: Conservative 0.0001 ETH baseline that balances accessibility with reasonable cost protection during network congestion
+
+## External Functions
+
+### `propagateRoot()`
+
+```solidity
+function propagateRoot() external payable
+```
+
+This function represents the bridge's primary operational interface, designed to democratize World ID root propagation while maintaining strict security guarantees. Upon invocation, it queries Worldcoin's canonical Identity Manager for the latest merkle tree root, implements comprehensive fee validation against configured limits, and performs the critical data transformation required for Starknet compatibility—splitting the 256-bit root into two 128-bit segments that align with Starknet's felt252 field element constraints. The function concludes by dispatching the transformed data through Starknet's cryptographically secured messaging infrastructure, making the latest identity state immediately available for verification on L2.
+
+## Bridge Owner Functions
+
+These administrative functions implement a comprehensive governance framework, ensuring that critical system parameters can be adjusted while maintaining strict access controls that protect against unauthorized modifications.
+
+### `changeL1StateBridgeAddress()`
+
+```solidity
+function changeL1StateBridgeAddress(address newL1StateBridgeAddress) external payable onlyOwner
+```
+
+This critical security function enables the systematic migration of bridge authority, updating the authorized L1 address recognized by the L2 contract. This capability is fundamental for maintaining operational continuity during contract upgrades, implementing security patches, or executing planned migrations while preserving the integrity of cross-chain authentication mechanisms.
+
+### `setRootHistoryExpiry()`
+
+```solidity
+function setRootHistoryExpiry(uint256 _rootHistoryExpiry) external payable onlyOwner
+```
+
+Provides precise control over the temporal validity window for historical roots on L2. This parameter represents a critical balance between security considerations—where shorter expiry periods limit the window for potential attacks—and user experience optimization, where longer periods provide greater flexibility for proof generation and verification workflows.
+
+### Fee Management Functions
+
+```solidity
+function setFeeLimitPropagateRoot(uint256 _starkFeeLimit) external onlyOwner
+function setFeeLimitSetRootHistoryExpiry(uint256 _starkFeeLimit) external onlyOwner
+function setFeeLimitTransferOwnership(uint256 _starkFeeLimit) external onlyOwner
+```
+
+These functions establish sophisticated economic safeguards that protect against both accidental overspending and potential economic attacks. By implementing granular fee controls for each operation type, the system maintains cost predictability while preserving operational flexibility during periods of network congestion or unusual market conditions.
+
+### Address Configuration Functions
+
+```solidity
+function setWorldIDIdentityManager(address _worldIDIdentityManager) external onlyOwner
+function setStarkWorldIDAddress(uint256 _starkWorldIDAddress) external onlyOwner
+function setStarknetCoreContract(address _starknetCoreContract) external onlyOwner
+```
+
+These configuration interfaces enable systematic maintenance and evolution of the bridge infrastructure. Each function implements comprehensive validation logic to prevent invalid configurations, ensuring that the bridge maintains its operational integrity even during complex upgrade procedures or emergency response scenarios.
+
+## Starknet L1-L2 Messaging
+
+The bridge leverages Starknet's production-grade messaging infrastructure, which provides cryptographically secured communication channels between Ethereum and Starknet execution environments.
+
+### Core Messaging Interface
+
+```solidity
+function sendMessageToL2(
+    uint256 toAddress,
+    uint256 selector,
+    uint256[] calldata payload
+) external payable returns (bytes32, uint256)
+```
+
+This sophisticated messaging primitive handles the complete lifecycle of cross-chain communication. The function orchestrates fee validation against both local and system-wide limits, generates cryptographically unique message identifiers using nonces and sender authentication, maintains persistent message state for tracking and potential cancellation, and emits comprehensive events for monitoring and analytics. The return values provide both a message hash for tracking purposes and a nonce that enables message cancellation if required before processing.
+
+### Data Format Conversion
+
+The bridge implements intelligent data transformation to bridge the architectural differences between Ethereum's 256-bit word size and Starknet's 252-bit field elements (felt252). This conversion process automatically segments larger values into compatible chunks—for instance, transforming a 256-bit root hash into two precisely formatted 128-bit values that maintain mathematical integrity while conforming to Starknet's field arithmetic constraints. This approach ensures seamless interoperability without compromising the cryptographic properties of the underlying data.
+
+### Message Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Bridge as StarkStateBridge<br/>(L1)
+    participant Starknet as Starknet Messaging<br/>(L1-L2 Infrastructure)
+    participant L2Contract as StarkWorldID<br/>(L2)
+    
+    Bridge->>Starknet: sendMessageToL2()
+    Note over Starknet: Routes message<br/>to Starknet
+    Starknet->>L2Contract: receiveRoot()
+    L2Contract->>L2Contract: Update state
+    
+    Note over Bridge,L2Contract: Root successfully bridged (fire-and-forget)
+```
+
+## Events and Monitoring
+
+### Bridge Contract Events
+
+The StarkStateBridge contract emits comprehensive events that provide complete visibility into bridge operations:
+
+```solidity
+event RootPropagated(uint256 root);
+```
+Emitted each time a World ID root is successfully bridged to Starknet. This event allows monitoring systems to track root synchronization and verify that the latest identity state is being properly propagated across chains.
+
+```solidity
+event L1StateBridgeAddressOnL2Changed(address indexed previousOwner, address indexed newOwner);
+```
+Triggered when the authorized L1 bridge address is updated on the L2 contract. This critical security event helps track ownership transitions and ensures that only legitimate bridge contracts can send messages to Starknet.
+
+```solidity
+event SetRootHistoryExpiry(uint256 rootHistoryExpiry);
+```
+Logged whenever the root expiry duration is modified. This event helps operators understand how long historical roots remain valid for proof verification, which directly impacts user experience and security policies.
+
+```solidity
+event SetFeeLimitPropagateRoot(uint256 _FeeLimit);
+event SetFeeLimitSetRootHistoryExpiry(uint256 _FeeLimit);
+event SetFeeLimitTransferOwnership(uint256 _FeeLimit);
+```
+These events track changes to fee limits for different operations. Monitoring these events helps ensure cost control mechanisms are functioning properly and provides transparency into economic parameters.
+
+```solidity
+event SetWorldIDIdentityManager(address _worldIDIdentityManager);
+event SetStarkWorldIDAddress(uint256 _starkWorldIDAddress);
+event SetStarknetCoreContract(address _starknetCoreContract);
+```
+Configuration events that track updates to critical contract addresses. These events are essential for maintaining operational awareness and ensuring all components remain properly connected.
+
+### Starknet Messaging Events
+
+The underlying Starknet messaging infrastructure provides additional observability:
+
+```solidity
+event LogMessageToL2(
+    address indexed fromAddress,
+    uint256 indexed toAddress,
+    uint256 indexed selector,
+    uint256[] payload,
+    uint256 nonce,
+    uint256 fee
+);
+```
+Emitted for every L1-L2 message sent through the bridge. This event provides complete traceability of cross-chain communications, including the exact data transmitted, associated costs, and unique identifiers for tracking message status.
+
+```solidity
+event ConsumedMessageToL1(uint256 indexed fromAddress, address indexed toAddress, uint256[] payload);
+```
+Triggered when L2 contracts send responses back to L1. While the World ID bridge primarily sends data to L2, this event helps track any reverse communications that might occur during bridge operations.
+
+## Error Handling
+
+The contract implements a comprehensive error taxonomy designed to provide clear diagnostic information while maintaining operational security:
+
+- **FeeLimitZero**: Prevents the establishment of zero fee limits, which would disable economic protections and potentially enable denial-of-service attacks
+- **AddressZero**: Guards against invalid address configurations that would break critical contract relationships and communication pathways
+- **ExceededFeeLimit**: Enforces economic boundaries when message fees exceed configured thresholds, protecting against both accidental overspending and potential economic exploitation
+
+These carefully designed error conditions provide immediate feedback to users and monitoring systems, enabling rapid diagnosis and resolution of operational issues while maintaining the system's security posture.
+
+## Deployment Information
+
+### Testnet Deployment
+- **Network**: Sepolia
+- **Contract Address**: `0x5aA8058C1E090d8299162b021e32a284Ec55f3D0`
+
+### Mainnet Deployment
+- **Status**: Ready for production deployment
+
+The L1 bridge establishes a sophisticated foundation for extending World ID's proof-of-personhood infrastructure to Starknet's ecosystem. Through careful architectural decisions that prioritize security, operational resilience, and cost management, this implementation enables developers to build the next generation of identity-aware applications while maintaining the cryptographic guarantees and decentralization principles that define the World ID protocol. The bridge's design reflects a deep understanding of both Ethereum and Starknet's technical capabilities, creating a seamless developer experience that abstracts complex cross-chain mechanics while preserving full transparency and control over the underlying operations.
