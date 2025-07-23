@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vocs dev",
-    "build": "pnpm install --no-frozen-lockfile && vocs build",
+    "build": "vocs build",
     "preview": "vocs preview",
-    "prebuild": "pnpm dlx playwright install chromium --with-deps"
+    "setup": "rm -f pnpm-lock.yaml && pnpm install",
+    "prebuild": "pnpm install --no-frozen-lockfile && pnpm dlx playwright install chromium --with-deps"
   },
   "dependencies": {
     "lucide-react": "^0.525.0",

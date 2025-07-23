@@ -1,5 +1,6 @@
 {
-  "buildCommand": "cd docs && pnpm install --no-frozen-lockfile && pnpm run build",
+  "buildCommand": "cd docs && rm -f pnpm-lock.yaml && pnpm install && pnpm run build",
+  "installCommand": "cd docs && pnpm install --no-frozen-lockfile",
   "outputDirectory": "docs/dist",
   "framework": "vite"
 }
