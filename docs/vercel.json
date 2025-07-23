@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd docs && pnpm install --no-frozen-lockfile && pnpm exec playwright install chromium && pnpm run build",
+  "buildCommand": "cd docs && pnpm install && pnpm add -D @playwright/test && pnpm exec playwright install chromium && pnpm run build",
   "outputDirectory": "docs/dist",
   "framework": "vite"
 }
