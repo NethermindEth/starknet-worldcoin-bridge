@@ -7,7 +7,7 @@
     "dev": "vocs dev",
     "build": "vocs build",
     "preview": "vocs preview",
-    "prebuild": "npx playwright install chromium --with-deps"
+    "prebuild": "pnpm dlx playwright install chromium --with-deps"
   },
   "dependencies": {
     "lucide-react": "^0.525.0",
@@ -16,6 +16,7 @@
     "vocs": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.42.1",
     "@types/react": "latest",
     "typescript": "latest"
   },

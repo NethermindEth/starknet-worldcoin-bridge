@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd docs && pnpm install && pnpm run build",
-  "installCommand": "cd docs && pnpm install",
+  "buildCommand": "cd docs && pnpm install && pnpm dlx playwright install chromium --with-deps && pnpm run build",
+  "outputDirectory": "docs/dist",
   "framework": "vite"
 }
