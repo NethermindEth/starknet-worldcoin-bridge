@@ -1,8 +1,5 @@
 {
-  "buildCommand": "cd docs && pnpm install && pnpm add -D @playwright/test && PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true pnpm exec playwright install chromium && pnpm run build",
+  "buildCommand": "cd docs && pnpm install && pnpm add -D @playwright/test && pnpm exec playwright install-deps chromium && pnpm exec playwright install chromium && pnpm run build",
   "outputDirectory": "docs/dist",
-  "framework": "vite",
-  "env": {
-    "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "true"
-  }
+  "framework": "vite"
 }
