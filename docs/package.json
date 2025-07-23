@@ -9,6 +9,7 @@
     "preview": "vocs preview"
   },
   "dependencies": {
+    "lucide-react": "^0.525.0",
     "react": "latest",
     "react-dom": "latest",
     "vocs": "latest"
