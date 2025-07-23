@@ -1,3 +1,5 @@
+import { Mermaid } from '../components/Mermaid'
+
 # L1 Components
 
 The L1 component serves as the foundational layer for World ID's cross-chain infrastructure, centered around the `StarkStateBridge` contract. This sophisticated bridging mechanism establishes a secure, permissionless pathway for World ID's identity merkle tree state to reach Starknet's execution environment. 
@@ -5,8 +7,8 @@ The L1 component serves as the foundational layer for World ID's cross-chain inf
 By interfacing directly with Worldcoin's canonical World ID Identity Manager, the bridge ensures that Starknet applications have access to the same cryptographic guarantees and proof-of-personhood capabilities that exist on Ethereum mainnet. The architecture leverages Starknet's native L1-L2 messaging protocol, providing developers with a robust foundation for building identity-aware applications that maintain the highest standards of security and decentralization.
 
 ## Architecture
-```mermaid
-graph TB
+
+<Mermaid chart={`graph TB
     subgraph "World ID Ecosystem"
         WIM(World ID Identity Manager)
     end
@@ -40,8 +42,7 @@ graph TB
     style SNC fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
     style REL fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
     style OWNER fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
-    style USERS fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
-```
+    style USERS fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000`} />
 
 ## StarkStateBridge Contract
 
@@ -131,8 +132,7 @@ The bridge implements intelligent data transformation to bridge the architectura
 
 ### Message Lifecycle
 
-```mermaid
-sequenceDiagram
+<Mermaid chart={`sequenceDiagram
     participant Bridge as StarkStateBridge<br/>(L1)
     participant Starknet as Starknet Messaging<br/>(L1-L2 Infrastructure)
     participant L2Contract as StarkWorldID<br/>(L2)
@@ -142,8 +142,7 @@ sequenceDiagram
     Starknet->>L2Contract: receiveRoot()
     L2Contract->>L2Contract: Update state
     
-    Note over Bridge,L2Contract: Root successfully bridged (fire-and-forget)
-```
+    Note over Bridge,L2Contract: Root successfully bridged (fire-and-forget)`} />
 
 ## Events and Monitoring
 

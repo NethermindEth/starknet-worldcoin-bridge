@@ -1,3 +1,5 @@
+import { Mermaid } from '../components/Mermaid'
+
 # System Overview
 
 The World ID Bridge represents a sophisticated cross-chain infrastructure that extends Worldcoin's proof-of-personhood capabilities from Ethereum to Starknet's execution environment. This system creates a secure, efficient pathway for World ID's identity verification guarantees to operate natively within Starknet applications, enabling developers to build human-verified experiences while leveraging Starknet's computational advantages.
@@ -6,8 +8,7 @@ The bridge architecture implements a carefully orchestrated two-layer system: Et
 
 ## Architecture Overview
 
-```mermaid
-graph TB
+<Mermaid chart={`graph TB
     subgraph "Ethereum L1"
         WIM[World ID Identity Manager<br/>Worldcoin's canonical identity system]
         SSB[StarkStateBridge Contract<br/>Root synchronization & messaging]
@@ -41,8 +42,7 @@ graph TB
     style SNC fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
     style REL fill:#f9f9f9,stroke:#757575,stroke-width:1px,color:#000
     style DAPPS fill:#e8f5e8,stroke:#4caf50,stroke-width:2px,color:#000
-    style USERS fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000
-```
+    style USERS fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000`} />
 
 ## Core Components
 
@@ -68,8 +68,7 @@ The Starknet layer provides the execution environment where applications can eff
 
 ### Root Propagation Process
 
-```mermaid
-sequenceDiagram
+<Mermaid chart={`sequenceDiagram
     participant WIM as World ID<br/>Identity Manager
     participant SSB as StarkStateBridge<br/>(L1)
     participant SNC as Starknet Core<br/>(L1-L2 Messaging)
@@ -86,15 +85,13 @@ sequenceDiagram
     SWI->>SWI: Update latest root & history
     SWI-->>SWI: Emit RootAdded event
     
-    Note over WIM,SWI: Root successfully synchronized
-```
+    Note over WIM,SWI: Root successfully synchronized`} />
 
 The synchronization process ensures that Starknet applications have access to the most current World ID state while maintaining strict security validations throughout the cross-chain communication pathway.
 
 ### Identity Verification Workflow
 
-```mermaid
-sequenceDiagram
+<Mermaid chart={`sequenceDiagram
     participant USER as End User
     participant DAPP as Your dApp
     participant SWI as StarkWorldID<br/>(L2)
@@ -113,8 +110,7 @@ sequenceDiagram
     SWI-->>DAPP: Verification success + public inputs
     DAPP->>DAPP: Execute verified action
     
-    Note over USER,DAPP: Human-verified interaction complete
-```
+    Note over USER,DAPP: Human-verified interaction complete`} />
 
 This workflow demonstrates how applications can seamlessly integrate World ID verification while maintaining excellent user experience and strong security guarantees.
 

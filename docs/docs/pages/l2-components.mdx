@@ -1,3 +1,5 @@
+import { Mermaid } from '../components/Mermaid'
+
 # L2 Components
 
 The L2 component serves as the execution layer for World ID's identity verification infrastructure on Starknet, centered around the `StarkWorldID` contract. This sophisticated identity management system receives and validates World ID merkle tree roots from Ethereum, enabling native zero-knowledge proof verification directly within Starknet's execution environment.
@@ -6,8 +8,7 @@ By maintaining synchronized state with Worldcoin's canonical identity system whi
 
 ## Architecture
 
-```mermaid
-graph TB
+<Mermaid chart={`graph TB
     subgraph "L1 Ethereum"
         L1B[StarkStateBridge]
     end
@@ -25,8 +26,7 @@ graph TB
     
     style SWI fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
     style L1B fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
-    style USERS fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-```
+    style USERS fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000`} />
 
 ## StarkWorldID Contract
 
