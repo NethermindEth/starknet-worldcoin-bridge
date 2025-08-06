@@ -3,6 +3,7 @@ import { ArrowRight, Github, Shield, Copy, Lock, Zap, Users, Cpu } from 'lucide-
 
 export function WorldIDHero() {
   const [windowWidth, setWindowWidth] = useState(1200); // Default desktop width
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     // Update width on mount and window resize
@@ -10,6 +11,34 @@ export function WorldIDHero() {
     updateWidth();
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  // Theme detection
+  useEffect(() => {
+    // Check for theme preference
+    const checkTheme = () => {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
+                     document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+    
+    checkTheme();
+    
+    // Listen for theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', checkTheme);
+    
+    // Also listen for manual theme toggles
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ['class'] 
+    });
+    
+    return () => {
+      mediaQuery.removeEventListener('change', checkTheme);
+      observer.disconnect();
+    };
   }, []);
 
   // Force full screen and remove scroll
@@ -230,17 +259,15 @@ export function WorldIDHero() {
         borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: '32px', // Reduced from 40px
-            height: '32px', // Reduced from 40px
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #ff4901 0%, #ff6b35 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Shield style={{ width: '20px', height: '20px', color: 'white' }} /> {/* Reduced from 24px */}
-          </div>
+          <img
+            src={isDarkMode ? "/LogoLightContext.svg" : "/LogoDarkContext.svg"}
+            alt="Logo"
+            style={{
+              width: '32px',
+              height: '32px',
+              objectFit: 'contain'
+            }}
+          />
           <span style={{ 
             fontSize: '15px', 
             fontWeight: '500', 
@@ -303,15 +330,33 @@ export function WorldIDHero() {
           textAlign: 'center',
           maxWidth: windowWidth < 640 ? '100%' : '1200px',
           width: '100%',
-          height: '100%', // Add this
-          position: 'relative', // Add this
-          display: 'flex', // Add this
-          flexDirection: 'column', // Add this
-          justifyContent: 'space-between' // Add this to space out content
+          height: '100%',
+          position: 'relative', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'space-between' 
         }}>
           <div> {/* Wrap main content in a div */}
+            {/* Centered Logo */}
+            <div style={{ 
+              marginBottom: '2rem', 
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <img
+                src={isDarkMode ? "/LogoDarkContext.svg" : "/LogoLightContext.svg"}
+                alt="Starknet World ID Bridge Logo"
+                style={{
+                  width: '120px',
+                  height: '120px',
+                  objectFit: 'contain'
+                }}
+              />
+            </div>
+
             {/* Status Badge */}
-            <div style={{ marginBottom: '2rem' }}>
+            <div style={{ marginBottom: '1.5rem' }}> {/* Reduced from 2rem */}
               <a
                 href="https://github.com/NethermindEth/starknet-worldcoin-bridge/releases"
                 target="_blank"
@@ -376,11 +421,11 @@ export function WorldIDHero() {
 
             {/* Main Heading */}
             <h1 style={{
-              fontSize: 'clamp(2rem, 6vw, 4.5rem)',
+              fontSize: 'clamp(1.8rem, 5vw, 4rem)', // Reduced from 2rem and 4.5rem
               lineHeight: '0.9',
               fontWeight: '800',
               color: 'white',
-              marginBottom: '1rem',
+              marginBottom: '0.8rem', // Reduced from 1rem
               letterSpacing: '-0.025em'
             }}>
               <div>Connecting</div>
@@ -407,12 +452,12 @@ export function WorldIDHero() {
 
             {/* Subtitle */}
             <p style={{
-              fontSize: 'clamp(0.9rem, 1.8vw, 1.1rem)',
+              fontSize: 'clamp(0.8rem, 1.5vw, 1rem)', // Reduced from 0.9rem and 1.1rem
               lineHeight: '1.4',
               color: 'rgba(255, 255, 255, 0.8)',
-              marginBottom: '1.8rem',
+              marginBottom: '1.5rem', // Reduced from 1.8rem
               maxWidth: '600px',
-              margin: '0 auto 1.8rem auto'
+              margin: '0 auto 1.5rem auto'
             }}>
               Enable human verification in your Starknet DApps while preserving user privacy through zero-knowledge proofs.
             </p>
@@ -424,7 +469,7 @@ export function WorldIDHero() {
               justifyContent: 'center',
               gap: windowWidth < 480 ? '0.5rem' : '0.75rem',
               padding: windowWidth < 480 ? '0 0.5rem' : 0,
-              marginBottom: '2rem'
+              marginBottom: '1.2rem', // Reduced from 1.5rem
             }}>
               {[
                 { icon: Lock, text: 'Privacy-First' },
@@ -472,7 +517,7 @@ export function WorldIDHero() {
             {/* Code Snippet */}
             <div style={{
               maxWidth: windowWidth < 768 ? '95%' : '500px', // Reduced from 800px
-              margin: '0 auto 2rem auto',
+              margin: '0 auto 1.5rem auto', // Reduced from 2rem
               fontSize: windowWidth < 480 ? '10px' : '11px'
             }}>
               <div style={{
@@ -539,7 +584,7 @@ pub trait IStarkWorldID<TContractState> {
             </div>
 
             {/* CTA Button */}
-            <div style={{ marginBottom: '2rem' }}>
+            <div style={{ marginBottom: '1.2rem' }}> {/* Reduced from 1.5rem */}
               <a
                 href="/getting-started"
                 style={{
@@ -575,13 +620,13 @@ pub trait IStarkWorldID<TContractState> {
 
           {/* Partners section */}
           <div style={{
-            padding: windowWidth < 480 ? '1rem 0.5rem' : '1.2rem',
+            padding: windowWidth < 480 ? '0.4rem 0.5rem 0.8rem 0.5rem' : '0.5rem 1rem 1rem 1rem', // Reduced all padding
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           }}>
             <p style={{ 
               color: 'rgba(255, 255, 255, 0.4)', 
-              marginBottom: '0.8rem', 
-              fontSize: '11px', 
+              marginBottom: '0.4rem', // Reduced from 0.5rem
+              fontSize: '8px', // Reduced from 9px
               textTransform: 'uppercase', 
               letterSpacing: '0.05em', 
               fontWeight: '500' 
@@ -593,10 +638,10 @@ pub trait IStarkWorldID<TContractState> {
               flexWrap: 'wrap', 
               justifyContent: 'center', 
               alignItems: 'center', 
-              gap: windowWidth < 480 ? '0.8rem' : '1.2rem' 
+              gap: windowWidth < 480 ? '0.4rem' : '0.6rem' 
             }}>
               {[
-                { name: 'World Foundation', href: 'https://worldcoin.org' },
+                { name: 'World', href: 'https://worldcoin.org' },
                 { name: 'Nethermind', href: 'https://nethermind.io' },
                 { name: 'Starknet', href: 'https://starknet.io' },
                 { name: 'Garaga', href: 'https://github.com/keep-starknet-strange/garaga' }
@@ -608,7 +653,7 @@ pub trait IStarkWorldID<TContractState> {
                   rel="noopener noreferrer"
                   style={{ 
                     color: 'rgba(255, 255, 255, 0.6)', 
-                    fontSize: '13px', 
+                    fontSize: '11px', 
                     fontWeight: '500',
                     textDecoration: 'none',
                     transition: 'color 0.2s'
