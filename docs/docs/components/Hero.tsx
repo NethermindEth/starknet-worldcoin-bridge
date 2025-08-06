@@ -41,13 +41,23 @@ export function WorldIDHero() {
     };
   }, []);
 
-  // Force full screen and remove scroll
+  // Force full screen and remove scroll - but allow scroll on mobile
   useEffect(() => {
-    // Hide body scroll
-    document.body.style.overflow = 'hidden';
-    document.body.style.height = '100vh';
-    document.documentElement.style.overflow = 'hidden';
-    document.documentElement.style.height = '100vh';
+    const isMobile = window.innerWidth <= 640;
+    
+    if (!isMobile) {
+      // Hide body scroll on desktop/tablet
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100vh';
+    } else {
+      // Allow scroll on mobile
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    }
     
     // Find and modify parent containers
     const containers = [
@@ -60,8 +70,13 @@ export function WorldIDHero() {
     
     containers.forEach(container => {
       if (container) {
-        (container as HTMLElement).style.height = '100vh';
-        (container as HTMLElement).style.overflow = 'hidden';
+        if (!isMobile) {
+          (container as HTMLElement).style.height = '100vh';
+          (container as HTMLElement).style.overflow = 'hidden';
+        } else {
+          (container as HTMLElement).style.height = '';
+          (container as HTMLElement).style.overflow = '';
+        }
         (container as HTMLElement).style.padding = '0';
         (container as HTMLElement).style.margin = '0';
       }
@@ -74,7 +89,9 @@ export function WorldIDHero() {
       document.documentElement.style.overflow = '';
       document.documentElement.style.height = '';
     };
-  }, []);
+  }, [windowWidth]); // Re-run when window width changes
+
+  const isMobile = windowWidth <= 640;
 
   return (
     <div 
@@ -86,7 +103,7 @@ export function WorldIDHero() {
         height: '100vh',
         backgroundColor: '#03022b',
         zIndex: 9999,
-        overflow: 'hidden'
+        overflow: isMobile ? 'auto' : 'hidden'
       }}
     >
       {/* Background Animation */}
@@ -319,22 +336,25 @@ export function WorldIDHero() {
       <div style={{
         position: 'relative',
         zIndex: 10,
-        height: 'calc(100vh - 64px)',
+        height: '100%',
+        minHeight: '100vh',
         display: 'flex',
-        alignItems: 'flex-start', // Change from center to flex-start
+        alignItems: isMobile ? 'stretch' : 'flex-start',
         justifyContent: 'center',
         padding: windowWidth < 640 ? '1rem' : '2rem',
-        paddingTop: windowWidth < 640 ? '2rem' : '4rem'
+        paddingTop: windowWidth < 640 ? '2rem' : '4rem',
+        paddingBottom: isMobile ? '2rem' : '0'
       }}>
         <div style={{
           textAlign: 'center',
           maxWidth: windowWidth < 640 ? '100%' : '1200px',
           width: '100%',
-          height: '100%',
+          height: isMobile ? 'auto' : 'calc(100vh - 128px)',
+          minHeight: isMobile ? 'calc(100vh - 128px)' : 'auto',
           position: 'relative', 
           display: 'flex', 
           flexDirection: 'column', 
-          justifyContent: 'space-between' 
+          justifyContent: 'space-between'
         }}>
           <div> {/* Wrap main content in a div */}
             {/* Centered Logo */}
@@ -622,6 +642,7 @@ pub trait IStarkWorldID<TContractState> {
           <div style={{
             padding: windowWidth < 480 ? '0.4rem 0.5rem 0.8rem 0.5rem' : '0.5rem 1rem 1rem 1rem', // Reduced all padding
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            marginTop: isMobile ? '2rem' : '0' // Add top margin on mobile for spacing
           }}>
             <p style={{ 
               color: 'rgba(255, 255, 255, 0.4)', 

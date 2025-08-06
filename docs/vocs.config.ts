@@ -8,7 +8,7 @@ export default defineConfig({
     height: '30px',
     content: '🚧 Docs are a work in progress. Thanks for your patience as we improve them!',
   },
-  title: 'Docs',
+  title: 'Starknet Worldcoin ID Bridge ',
   sidebar: [
     {
       text: 'Introduction',
