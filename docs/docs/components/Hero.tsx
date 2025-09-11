@@ -3,14 +3,19 @@ import { ArrowRight, Github, Shield, Copy, Lock, Zap, Users, Cpu } from 'lucide-
 
 export function WorldIDHero() {
   const [windowWidth, setWindowWidth] = useState(1200); // Default desktop width
+  const [windowHeight, setWindowHeight] = useState(800); // Default desktop height
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [contentOverflows, setContentOverflows] = useState(false);
 
   useEffect(() => {
-    // Update width on mount and window resize
-    const updateWidth = () => setWindowWidth(window.innerWidth);
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    // Update dimensions on mount and window resize
+    const updateDimensions = () => {
+      setWindowWidth(window.innerWidth);
+      setWindowHeight(window.innerHeight);
+    };
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
   // Theme detection
@@ -41,18 +46,48 @@ export function WorldIDHero() {
     };
   }, []);
 
-  // Force full screen and remove scroll - but allow scroll on mobile
+  // Content overflow detection
+  useEffect(() => {
+    const checkContentOverflow = () => {
+      // Estimate minimum content height needed
+      const navHeight = 80;
+      const logoHeight = 120;
+      const statusHeight = 60;
+      const titleHeight = 120;
+      const subtitleHeight = 50;
+      const pillsHeight = 60;
+      const codeHeight = 200;
+      const buttonHeight = 60;
+      const partnersHeight = 80;
+      const padding = 120;
+      
+      const estimatedContentHeight = navHeight + logoHeight + statusHeight + 
+        titleHeight + subtitleHeight + pillsHeight + codeHeight + 
+        buttonHeight + partnersHeight + padding;
+      
+      const availableHeight = window.innerHeight;
+      const needsScroll = estimatedContentHeight > availableHeight;
+      
+      setContentOverflows(needsScroll);
+    };
+
+    checkContentOverflow();
+  }, [windowWidth, windowHeight]);
+
+  // Force full screen and manage scroll based on content overflow
   useEffect(() => {
     const isMobile = window.innerWidth <= 640;
+    const isSmallHeight = window.innerHeight < 700;
+    const needsScroll = isMobile || contentOverflows || isSmallHeight;
     
-    if (!isMobile) {
-      // Hide body scroll on desktop/tablet
+    if (!needsScroll) {
+      // Hide body scroll on desktop/tablet when content fits
       document.body.style.overflow = 'hidden';
       document.body.style.height = '100vh';
       document.documentElement.style.overflow = 'hidden';
       document.documentElement.style.height = '100vh';
     } else {
-      // Allow scroll on mobile
+      // Allow scroll when content overflows or on mobile
       document.body.style.overflow = '';
       document.body.style.height = '';
       document.documentElement.style.overflow = '';
@@ -70,7 +105,7 @@ export function WorldIDHero() {
     
     containers.forEach(container => {
       if (container) {
-        if (!isMobile) {
+        if (!needsScroll) {
           (container as HTMLElement).style.height = '100vh';
           (container as HTMLElement).style.overflow = 'hidden';
         } else {
@@ -89,12 +124,15 @@ export function WorldIDHero() {
       document.documentElement.style.overflow = '';
       document.documentElement.style.height = '';
     };
-  }, [windowWidth]); // Re-run when window width changes
+  }, [windowWidth, windowHeight, contentOverflows]); // Re-run when dimensions or overflow changes
 
   const isMobile = windowWidth <= 640;
+  const isSmallHeight = windowHeight < 700;
+  const needsScroll = isMobile || contentOverflows || isSmallHeight;
 
   return (
     <div 
+      id="world-id-hero-root"
       style={{
         position: 'fixed',
         top: 0,
@@ -103,7 +141,7 @@ export function WorldIDHero() {
         height: '100vh',
         backgroundColor: '#03022b',
         zIndex: 9999,
-        overflow: isMobile ? 'auto' : 'hidden'
+        overflow: needsScroll ? 'auto' : 'hidden'
       }}
     >
       {/* Background Animation */}
@@ -264,7 +302,7 @@ export function WorldIDHero() {
       </div>
 
       {/* Navigation Bar */}
-      <nav style={{
+      <nav className="hero-nav" style={{
         position: 'relative',
         zIndex: 20,
         display: 'flex',
@@ -336,21 +374,21 @@ export function WorldIDHero() {
       <div style={{
         position: 'relative',
         zIndex: 10,
-        height: '100%',
+        height: needsScroll ? 'auto' : '100%',
         minHeight: '100vh',
         display: 'flex',
-        alignItems: isMobile ? 'stretch' : 'flex-start',
+        alignItems: needsScroll ? 'stretch' : 'flex-start',
         justifyContent: 'center',
         padding: windowWidth < 640 ? '1rem' : '2rem',
         paddingTop: windowWidth < 640 ? '2rem' : '4rem',
-        paddingBottom: isMobile ? '2rem' : '0'
+        paddingBottom: needsScroll ? '2rem' : '0'
       }}>
         <div style={{
           textAlign: 'center',
           maxWidth: windowWidth < 640 ? '100%' : '1200px',
           width: '100%',
-          height: isMobile ? 'auto' : 'calc(100vh - 128px)',
-          minHeight: isMobile ? 'calc(100vh - 128px)' : 'auto',
+          height: needsScroll ? 'auto' : 'calc(100vh - 128px)',
+          minHeight: needsScroll ? 'calc(100vh - 128px)' : 'auto',
           position: 'relative', 
           display: 'flex', 
           flexDirection: 'column', 
@@ -441,11 +479,11 @@ export function WorldIDHero() {
 
             {/* Main Heading */}
             <h1 style={{
-              fontSize: 'clamp(1.8rem, 5vw, 4rem)', // Reduced from 2rem and 4.5rem
-              lineHeight: '0.9',
+              fontSize: isSmallHeight ? 'clamp(1.5rem, 4vw, 3rem)' : 'clamp(1.8rem, 5vw, 4rem)',
+              lineHeight: isSmallHeight ? '0.85' : '0.9',
               fontWeight: '800',
               color: 'white',
-              marginBottom: '0.8rem', // Reduced from 1rem
+              marginBottom: isSmallHeight ? '0.6rem' : '0.8rem',
               letterSpacing: '-0.025em'
             }}>
               <div>Connecting</div>
@@ -472,12 +510,12 @@ export function WorldIDHero() {
 
             {/* Subtitle */}
             <p style={{
-              fontSize: 'clamp(0.8rem, 1.5vw, 1rem)', // Reduced from 0.9rem and 1.1rem
+              fontSize: isSmallHeight ? 'clamp(0.75rem, 1.2vw, 0.9rem)' : 'clamp(0.8rem, 1.5vw, 1rem)',
               lineHeight: '1.4',
               color: 'rgba(255, 255, 255, 0.8)',
-              marginBottom: '1.5rem', // Reduced from 1.8rem
+              marginBottom: isSmallHeight ? '1.2rem' : '1.5rem',
               maxWidth: '600px',
-              margin: '0 auto 1.5rem auto'
+              margin: `0 auto ${isSmallHeight ? '1.2rem' : '1.5rem'} auto`
             }}>
               Enable human verification in your Starknet DApps while preserving user privacy through zero-knowledge proofs.
             </p>
@@ -489,7 +527,7 @@ export function WorldIDHero() {
               justifyContent: 'center',
               gap: windowWidth < 480 ? '0.5rem' : '0.75rem',
               padding: windowWidth < 480 ? '0 0.5rem' : 0,
-              marginBottom: '1.2rem', // Reduced from 1.5rem
+              marginBottom: isSmallHeight ? '1rem' : '1.2rem',
             }}>
               {[
                 { icon: Lock, text: 'Privacy-First' },
@@ -536,8 +574,8 @@ export function WorldIDHero() {
 
             {/* Code Snippet */}
             <div style={{
-              maxWidth: windowWidth < 768 ? '95%' : '500px', // Reduced from 800px
-              margin: '0 auto 1.5rem auto', // Reduced from 2rem
+              maxWidth: windowWidth < 768 ? '95%' : '500px',
+              margin: `0 auto ${isSmallHeight ? '1.2rem' : '1.5rem'} auto`,
               fontSize: windowWidth < 480 ? '10px' : '11px'
             }}>
               <div style={{
@@ -604,7 +642,7 @@ pub trait IStarkWorldID<TContractState> {
             </div>
 
             {/* CTA Button */}
-            <div style={{ marginBottom: '1.2rem' }}> {/* Reduced from 1.5rem */}
+            <div style={{ marginBottom: isSmallHeight ? '1rem' : '1.2rem' }}>
               <a
                 href="/getting-started"
                 style={{
@@ -698,6 +736,27 @@ pub trait IStarkWorldID<TContractState> {
         }
         @media (max-width: 480px) {
           .feature-pill { padding: 0.35rem 0.75rem !important; }
+        }
+        @media (max-height: 700px) {
+          h1 { 
+            font-size: clamp(1.4rem, 3.5vw, 2.8rem) !important; 
+            margin-bottom: 0.5rem !important;
+          }
+          p { 
+            font-size: clamp(0.8rem, 1.2vw, 0.95rem) !important; 
+            margin-bottom: 1rem !important;
+          }
+          .status-badge { margin-bottom: 1rem !important; }
+          .feature-pills { margin-bottom: 1rem !important; }
+          .code-snippet { margin-bottom: 1rem !important; }
+        }
+        @media (max-height: 600px) {
+          h1 { 
+            font-size: clamp(1.2rem, 3vw, 2.4rem) !important; 
+            line-height: 0.8 !important;
+          }
+          .logo { width: 100px !important; height: 100px !important; }
+          .nav { padding: 0.5rem 1rem !important; }
         }
       `}</style>
     </div>
