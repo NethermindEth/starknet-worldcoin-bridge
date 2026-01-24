@@ -67,7 +67,7 @@ pub async fn fill_and_simulate_eip1559_transaction<M: Middleware>(
     let nonce = middleware
         .get_transaction_count(from, Some(BlockId::Number(BlockNumber::Latest)))
         .await
-        .unwrap();
+        .map_err(TransactionError::MiddlewareError)?;
 
     let mut tx: TypedTransaction = Eip1559TransactionRequest::new()
         .data(calldata.clone())

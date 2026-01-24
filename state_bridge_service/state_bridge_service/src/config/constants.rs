@@ -27,7 +27,8 @@ pub mod defaults {
 
     pub const RELAYING_PERIOD: Duration = Duration::new(43200, 0); // 12 hours
     pub const BLOCK_CONFIRMATIONS: usize = 0;
-    pub const DEFAULT_GAS: u32 = 300000;
+    // Increased from 300000 to 500000 to handle network congestion better
+    pub const DEFAULT_GAS: u32 = 500000;
     pub const DEFAULT_FEE: Felt = felt!("1000000000");
     pub const NO_FEE: Felt = felt!("0");
 

@@ -10,15 +10,16 @@ use crate::core::transaction::{self, check_gas_limit};
 use crate::error::error::StateBridgeError;
 use crate::telemetry::{BalanceMonitor, Metrics, MetricsExporter, TelemetryConfig};
 
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use ethers::contract::EthEvent;
-use ethers::providers::{Middleware, Provider as EthersProvider, PubsubClient, StreamExt, Ws};
+use ethers::providers::{Middleware, PubsubClient, StreamExt};
 use ethers::signers::Signer;
-use ethers::types::{Filter, U256};
+use ethers::types::{BlockNumber, Filter, U256};
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLock};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::sleep;
 use tracing::{error, info, instrument, warn};
@@ -61,6 +62,10 @@ where
     metrics: Option<Metrics>,
     _metrics_exporter: Option<MetricsExporter>,
     reconnection_config: ReconnectionConfig,
+    /// Cache of roots that have been successfully propagated (prevents duplicate attempts)
+    propagated_roots: Arc<RwLock<HashSet<U256>>>,
+    /// Last processed block number for catch-up after reconnection
+    last_processed_block: Arc<RwLock<Option<u64>>>,
 }
 
 impl<M, T> StateBridge<M, T>
@@ -83,6 +88,8 @@ where
             metrics: None,
             _metrics_exporter: None,
             reconnection_config: Default::default(),
+            propagated_roots: Arc::new(RwLock::new(HashSet::new())),
+            last_processed_block: Arc::new(RwLock::new(None)),
         })
     }
 
@@ -94,6 +101,8 @@ where
             metrics: None,
             _metrics_exporter: None,
             reconnection_config: Default::default(),
+            propagated_roots: Arc::new(RwLock::new(HashSet::new())),
+            last_processed_block: Arc::new(RwLock::new(None)),
         })
     }
 
@@ -211,7 +220,8 @@ where
             None
         };
 
-        let (tx, rx) = mpsc::channel::<TreeChanged>(1);
+        // Increased buffer size from 1 to 32 to prevent event loss during slow processing
+        let (tx, rx) = mpsc::channel::<TreeChanged>(32);
 
         let listener_handle = {
             let sb = self.clone();
@@ -247,18 +257,112 @@ where
     #[cfg(not(feature = "debug"))]
     pub async fn execute(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
         while let Some(evt) = rx.recv().await {
-            let root = into_felt(evt.post_root)?;
+            // Check local cache first (covers roots we've propagated this session)
+            {
+                let cache = self.propagated_roots.read().await;
+                if cache.contains(&evt.post_root) {
+                    info!(
+                        "Root {} already propagated (from cache), skipping",
+                        evt.post_root
+                    );
+                    continue;
+                }
+            }
 
+            // Check if this root already exists on L2 to avoid CANNOT_OVERWRITE_ROOT error
+            let root_felt = match into_felt(evt.post_root) {
+                Ok(r) => r,
+                Err(e) => {
+                    error!("Failed to convert root to felt: {:#}", e);
+                    continue;
+                }
+            };
+
+            // Check L2 for existing root (checks latest_root)
+            if let Ok(true) = self.config.root_exists_on_l2(evt.post_root).await {
+                info!(
+                    "Root {} already exists on L2 (is latest), skipping propagation",
+                    evt.post_root
+                );
+                // Add to cache so we don't check L2 again
+                self.propagated_roots.write().await.insert(evt.post_root);
+                continue;
+            }
+
+            // Estimate fee with retry logic
             let fee = match self.config.fee_type {
                 Fee::Default => DEFAULT_FEE,
-                Fee::Estimate => self.config.estimate_messaging_fee(root).await?.overall_fee,
+                Fee::Estimate => {
+                    match self.estimate_fee_with_retry(root_felt.clone(), 3).await {
+                        Ok(fee) => fee,
+                        Err(e) => {
+                            error!("Failed to estimate fee after retries: {:#}, using default", e);
+                            DEFAULT_FEE
+                        }
+                    }
+                }
                 Fee::NoFee => NO_FEE,
             };
 
-            self.propagate_root(fee.to_bytes_be().into()).await?;
+            // Propagate root with error handling - don't exit on failure
+            match self.propagate_root(fee.to_bytes_be().into()).await {
+                Ok(()) => {
+                    info!("Successfully propagated root {}", evt.post_root);
+                    // Add to cache on success
+                    self.propagated_roots.write().await.insert(evt.post_root);
+                }
+                Err(e) => {
+                    // Check if error is due to duplicate root (already propagated)
+                    let error_str = format!("{:#}", e);
+                    if error_str.contains("CANNOT_OVERWRITE_ROOT")
+                        || error_str.contains("already exists")
+                    {
+                        info!("Root {} already exists on L2, skipping", evt.post_root);
+                        // Add to cache so we don't try again
+                        self.propagated_roots.write().await.insert(evt.post_root);
+                    } else {
+                        error!(
+                            "Failed to propagate root {}: {:#}, continuing with next event",
+                            evt.post_root, e
+                        );
+                    }
+                    // Continue processing next events instead of exiting
+                }
+            }
         }
 
         Ok(())
+    }
+
+    /// Estimate messaging fee with retry logic
+    async fn estimate_fee_with_retry(
+        &self,
+        root: Vec<starknet::core::types::Felt>,
+        max_retries: u32,
+    ) -> eyre::Result<starknet::core::types::Felt> {
+        let mut last_error = None;
+        let mut delay = Duration::from_millis(500);
+
+        for attempt in 0..max_retries {
+            match self.config.estimate_messaging_fee(root.clone()).await {
+                Ok(fee) => return Ok(fee.overall_fee),
+                Err(e) => {
+                    warn!(
+                        "Fee estimation attempt {}/{} failed: {:#}",
+                        attempt + 1,
+                        max_retries,
+                        e
+                    );
+                    last_error = Some(e);
+                    if attempt < max_retries - 1 {
+                        sleep(delay).await;
+                        delay = std::cmp::min(delay * 2, Duration::from_secs(5));
+                    }
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| eyre::eyre!("Fee estimation failed")))
     }
 
     /// Listen for events with automatic reconnection on failure
@@ -275,6 +379,14 @@ where
             // Record connection attempt
             if let Some(metrics) = &self.metrics {
                 metrics.record_websocket_connection_attempt();
+            }
+
+            // On reconnection (attempt > 0), catch up on missed events first
+            if attempt > 0 {
+                if let Err(e) = self.catch_up_missed_events(tx.clone()).await {
+                    warn!("Failed to catch up on missed events: {:#}", e);
+                    // Continue anyway - we'll try to listen for new events
+                }
             }
 
             match self.listen_once(tx.clone()).await {
@@ -333,6 +445,87 @@ where
         Ok(())
     }
 
+    /// Catch up on any events that may have been missed during disconnection
+    async fn catch_up_missed_events(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
+        let last_block = {
+            let guard = self.last_processed_block.read().await;
+            *guard
+        };
+
+        let Some(from_block) = last_block else {
+            info!("No previous block recorded, skipping catch-up");
+            return Ok(());
+        };
+
+        // Get current block
+        let current_block = self
+            .config
+            .l1_provider()
+            .get_block_number()
+            .await
+            .map_err(|e| eyre::eyre!("Failed to get current block: {}", e))?
+            .as_u64();
+
+        if from_block >= current_block {
+            info!("Already caught up to block {}", current_block);
+            return Ok(());
+        }
+
+        info!(
+            "Catching up on missed events from block {} to {}",
+            from_block + 1,
+            current_block
+        );
+
+        // Query historical logs
+        let filter = Filter::new()
+            .address(self.config.identity_manager())
+            .event(&TreeChanged::abi_signature())
+            .from_block(BlockNumber::Number((from_block + 1).into()))
+            .to_block(BlockNumber::Number(current_block.into()));
+
+        let logs = self
+            .config
+            .l1_provider()
+            .get_logs(&filter)
+            .await
+            .map_err(|e| eyre::eyre!("Failed to fetch historical logs: {}", e))?;
+
+        let missed_count = logs.len();
+        if missed_count > 0 {
+            info!("Found {} missed events during disconnection", missed_count);
+        }
+
+        for log in logs {
+            match TreeChanged::decode_log(&log.into()) {
+                Ok(evt) => {
+                    info!(
+                        "Processing missed TreeChanged event: pre_root={}, post_root={}, kind={}",
+                        evt.pre_root, evt.post_root, evt.kind
+                    );
+
+                    if let Err(e) = tx.send(evt).await {
+                        warn!("Failed to send caught-up event to executor: {}", e);
+                        return Ok(());
+                    }
+                }
+                Err(e) => warn!("Failed to decode historical log as TreeChanged event: {:?}", e),
+            }
+        }
+
+        // Update last processed block
+        {
+            let mut guard = self.last_processed_block.write().await;
+            *guard = Some(current_block);
+        }
+
+        if missed_count > 0 {
+            info!("Catch-up complete, processed {} missed events", missed_count);
+        }
+
+        Ok(())
+    }
+
     /// Check if an error is potentially recoverable
     fn is_recoverable_error(&self, error: &eyre::Error) -> bool {
         let error_str = error.to_string().to_lowercase();
@@ -351,6 +544,24 @@ where
     #[cfg(not(feature = "debug"))]
     async fn listen_once(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
         info!("Establishing WebSocket connection for event listening...");
+
+        // Get current block number to start tracking from
+        let current_block = self
+            .config
+            .l1_provider()
+            .get_block_number()
+            .await
+            .map_err(|e| eyre::eyre!("Failed to get current block: {}", e))?
+            .as_u64();
+
+        // Initialize last processed block if not set
+        {
+            let mut guard = self.last_processed_block.write().await;
+            if guard.is_none() {
+                *guard = Some(current_block);
+                info!("Initialized block tracking at block {}", current_block);
+            }
+        }
 
         let filter = Filter::new()
             .address(self.config.identity_manager())
@@ -374,11 +585,18 @@ where
         );
 
         while let Some(log) = stream.next().await {
-            match TreeChanged::decode_log(&log.into()) {
+            // Track block number for catch-up on reconnection
+            if let Some(block_num) = log.block_number {
+                let mut guard = self.last_processed_block.write().await;
+                *guard = Some(block_num.as_u64());
+            }
+
+            match TreeChanged::decode_log(&log.clone().into()) {
                 Ok(evt) => {
                     info!(
-                        "Received TreeChanged event: pre_root={}, post_root={}, kind={}",
-                        evt.pre_root, evt.post_root, evt.kind
+                        "Received TreeChanged event: pre_root={}, post_root={}, kind={}, block={}",
+                        evt.pre_root, evt.post_root, evt.kind,
+                        log.block_number.map(|b| b.as_u64()).unwrap_or(0)
                     );
 
                     if let Err(e) = tx.send(evt).await {
@@ -406,26 +624,83 @@ where
         while let Some(evt) = rx.recv().await {
             println!("got = {:?}", evt);
 
-            let root = into_felt(evt.post_root)?;
+            // Check local cache first
+            {
+                let cache = self.propagated_roots.read().await;
+                if cache.contains(&evt.post_root) {
+                    info!(
+                        "Root {} already propagated (from cache), skipping",
+                        evt.post_root
+                    );
+                    continue;
+                }
+            }
+
+            let root = match into_felt(evt.post_root) {
+                Ok(r) => r,
+                Err(e) => {
+                    error!("Failed to convert root to felt: {:#}", e);
+                    continue;
+                }
+            };
+
+            // Check if root already exists on L2
+            if let Ok(true) = self.config.root_exists_on_l2(evt.post_root).await {
+                info!(
+                    "Root {} already exists on L2, skipping propagation",
+                    evt.post_root
+                );
+                self.propagated_roots.write().await.insert(evt.post_root);
+                continue;
+            }
 
             let fee = match self.config.fee_type {
                 Fee::Default => DEFAULT_FEE,
                 Fee::Estimate => {
-                    if root == self.config.get_root().await? {
-                        tracing::info!("Latest Root Found, using dummy root for simumlation")
+                    if root == self.config.get_root().await.unwrap_or_default() {
+                        tracing::info!("Latest Root Found, using dummy root for simulation")
                     }
 
-                    let dummy_root = self.config.get_root().await?;
+                    let dummy_root = match self.config.get_root().await {
+                        Ok(r) => r,
+                        Err(e) => {
+                            error!("Failed to get root: {:#}, using default fee", e);
+                            return Ok(());
+                        }
+                    };
 
-                    self.config
-                        .estimate_messaging_fee(dummy_root)
-                        .await?
-                        .overall_fee
+                    match self.config.estimate_messaging_fee(dummy_root).await {
+                        Ok(fee) => fee.overall_fee,
+                        Err(e) => {
+                            error!("Failed to estimate fee: {:#}, using default", e);
+                            DEFAULT_FEE
+                        }
+                    }
                 }
                 Fee::NoFee => NO_FEE,
             };
 
-            self.propagate_root(fee.to_bytes_be().into()).await?;
+            // Propagate root with error handling - don't exit on failure
+            match self.propagate_root(fee.to_bytes_be().into()).await {
+                Ok(()) => {
+                    info!("Successfully propagated root {}", evt.post_root);
+                    self.propagated_roots.write().await.insert(evt.post_root);
+                }
+                Err(e) => {
+                    let error_str = format!("{:#}", e);
+                    if error_str.contains("CANNOT_OVERWRITE_ROOT")
+                        || error_str.contains("already exists")
+                    {
+                        info!("Root {} already exists on L2, skipping", evt.post_root);
+                        self.propagated_roots.write().await.insert(evt.post_root);
+                    } else {
+                        error!(
+                            "Failed to propagate root {}: {:#}, continuing with next event",
+                            evt.post_root, e
+                        );
+                    }
+                }
+            }
         }
 
         Ok(())

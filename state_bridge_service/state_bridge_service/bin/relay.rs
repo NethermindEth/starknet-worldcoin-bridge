@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
         max_retries: 0, // Infinite retries for production
         initial_delay: Duration::from_secs(2),
         max_delay: Duration::from_secs(60),
-        backoff_multiplier: 1.0,
+        backoff_multiplier: 2.0, // Fixed: was 1.0, now properly exponential
         connection_timeout: Duration::from_secs(30),
     };
 

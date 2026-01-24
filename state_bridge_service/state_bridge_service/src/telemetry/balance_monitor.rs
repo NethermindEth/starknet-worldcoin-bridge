@@ -5,6 +5,7 @@ use crate::telemetry::{
 };
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use ethers::providers::Middleware;
@@ -13,6 +14,12 @@ use ethers::types::U256;
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
 use tokio::time::{interval, MissedTickBehavior};
 use tracing::{debug, error, info, warn};
+
+/// Minimum balance threshold in ETH - below this, an alert is triggered
+const MIN_BALANCE_THRESHOLD_ETH: f64 = 0.01;
+
+/// Critical balance threshold in ETH - below this, a critical alert is triggered
+const CRITICAL_BALANCE_THRESHOLD_ETH: f64 = 0.001;
 
 /// Balance monitoring service that continuously polls wallet balances
 /// and updates telemetry metrics
@@ -26,6 +33,10 @@ where
     metrics: Metrics,
     balance_history: BalanceHistory,
     start_time: Instant,
+    /// Track if we've already sent a low balance alert (to avoid spam)
+    low_balance_alerted: AtomicBool,
+    /// Track if we've already sent a critical balance alert
+    critical_balance_alerted: AtomicBool,
 }
 
 impl<M, T> BalanceMonitor<M, T>
@@ -48,6 +59,8 @@ where
             metrics,
             balance_history,
             start_time,
+            low_balance_alerted: AtomicBool::new(false),
+            critical_balance_alerted: AtomicBool::new(false),
         }
     }
 
@@ -91,6 +104,9 @@ where
                 let l1_balance_eth = wei_to_eth(l1_balance);
                 let gas_price_gwei = gas_price.map(wei_to_gwei);
 
+                // Check for low balance and send alerts
+                self.check_balance_alerts(l1_balance_eth);
+
                 // Update metrics
                 self.metrics
                     .record_balance_poll_success(poll_duration, l1_balance_eth);
@@ -125,9 +141,60 @@ where
         Ok(())
     }
 
+    /// Check balance thresholds and send alerts if needed
+    fn check_balance_alerts(&self, balance_eth: f64) {
+        let wallet_address = self.config.wallet().address();
+
+        // Critical balance alert (highest priority)
+        if balance_eth < CRITICAL_BALANCE_THRESHOLD_ETH {
+            // Only alert once until balance is restored
+            if !self.critical_balance_alerted.swap(true, Ordering::SeqCst) {
+                error!(
+                    "CRITICAL: Relayer wallet balance is critically low! \
+                     Balance: {:.6} ETH, Wallet: {:?}. \
+                     Transactions will fail! Please fund the wallet immediately.",
+                    balance_eth, wallet_address
+                );
+            }
+            // Also ensure low balance alert is set
+            self.low_balance_alerted.store(true, Ordering::SeqCst);
+        }
+        // Low balance warning
+        else if balance_eth < MIN_BALANCE_THRESHOLD_ETH {
+            // Reset critical alert if balance improved above critical
+            if self.critical_balance_alerted.swap(false, Ordering::SeqCst) {
+                info!("Balance improved above critical threshold");
+            }
+
+            // Only alert once until balance is restored
+            if !self.low_balance_alerted.swap(true, Ordering::SeqCst) {
+                error!(
+                    "LOW BALANCE WARNING: Relayer wallet balance is low! \
+                     Balance: {:.6} ETH, Wallet: {:?}. \
+                     Recommended minimum: {} ETH. Please fund the wallet soon.",
+                    balance_eth, wallet_address, MIN_BALANCE_THRESHOLD_ETH
+                );
+            }
+        }
+        // Balance is healthy - reset alerts
+        else {
+            let was_critical = self.critical_balance_alerted.swap(false, Ordering::SeqCst);
+            let was_low = self.low_balance_alerted.swap(false, Ordering::SeqCst);
+
+            if was_critical || was_low {
+                info!(
+                    "Balance restored to healthy level: {:.6} ETH",
+                    balance_eth
+                );
+            }
+        }
+    }
+
     /// Get L1 (Ethereum) balance and current gas price
     async fn get_l1_balance_and_gas(&self) -> eyre::Result<(U256, Option<U256>)> {
         let wallet_address = self.config.wallet().address();
+
+        debug!("Querying balance for wallet: {:?}", wallet_address);
 
         // Get balance and gas price concurrently
         let provider = self.config.l1_provider();
@@ -141,9 +208,10 @@ where
             eyre::eyre!("L1 balance query failed: {}", e)
         })?;
 
+        debug!("Raw balance from RPC: {} wei", balance);
+
         let gas_price = match gas_price_result {
             Ok(gp) => {
-                // info!("Gas price fetched successfully: {} wei ({:.6} Gwei)", gp, wei_to_gwei(gp));
                 Some(gp)
             }
             Err(e) => {
@@ -152,7 +220,7 @@ where
             }
         };
 
-        debug!("L1 balance: {} wei", balance);
+        debug!("L1 balance: {} wei ({} ETH)", balance, wei_to_eth(balance));
 
         Ok((balance, gas_price))
     }
@@ -189,14 +257,16 @@ pub struct BalanceSummary {
 
 /// Convert Wei to ETH
 fn wei_to_eth(wei: U256) -> f64 {
-    let eth_divisor = U256::from(10).pow(18.into());
-    let eth_value = wei.as_u128() as f64 / eth_divisor.as_u128() as f64;
-    eth_value
+    // Convert U256 to string and parse to avoid precision issues with as_u128()
+    let wei_str = wei.to_string();
+    let wei_val: f64 = wei_str.parse().unwrap_or(0.0);
+    wei_val / 1_000_000_000_000_000_000.0 // 10^18
 }
 
 /// Convert Wei to Gwei
 fn wei_to_gwei(wei: U256) -> f64 {
-    let gwei_divisor = U256::from(10).pow(9.into());
-    let gwei_value = wei.as_u128() as f64 / gwei_divisor.as_u128() as f64;
-    gwei_value
+    // Convert U256 to string and parse to avoid precision issues with as_u128()
+    let wei_str = wei.to_string();
+    let wei_val: f64 = wei_str.parse().unwrap_or(0.0);
+    wei_val / 1_000_000_000.0 // 10^9
 }

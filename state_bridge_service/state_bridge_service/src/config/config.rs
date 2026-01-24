@@ -11,7 +11,8 @@ use dotenv::dotenv;
 use ethers::providers::{Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::{Address, H160};
-use starknet::core::types::{BlockId, BlockTag, EthAddress, FeeEstimate, Felt, MsgFromL1};
+use starknet::core::types::{BlockId, BlockTag, EthAddress, FeeEstimate, Felt, FunctionCall, MsgFromL1};
+use ethers::types::U256;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport as StarknetJsonRpcTransport};
 use starknet::providers::{
     JsonRpcClient as StarknetJsonRPClient, Provider as StarknetProvider, Url,
@@ -201,5 +202,46 @@ where
         let dummy_root_1 = Felt::from(2_u128 << 128 - 1);
 
         Ok(vec![dummy_root_0, dummy_root_1])
+    }
+
+    /// Check if a root already exists on L2 by querying the latest_root
+    /// Returns true if the root matches the current latest root on L2
+    pub async fn root_exists_on_l2(&self, root: U256) -> eyre::Result<bool> {
+        // Selector for latest_root() function
+        // keccak256("latest_root") truncated to 250 bits
+        let selector = Felt::from_hex_unchecked(
+            "0x03f51e07ce1cae5af1356e79989c2093ce9dfd24855872eb607b49ca35df0e2a"
+        );
+
+        let call = FunctionCall {
+            contract_address: self.bridge_address_book.bridge_l2,
+            entry_point_selector: selector,
+            calldata: vec![],
+        };
+
+        match self.l2_provider.call(call, BlockId::Tag(BlockTag::Latest)).await {
+            Ok(result) => {
+                if result.len() >= 2 {
+                    // L2 returns u256 as two felt252 (low, high)
+                    let low: u128 = result[0].to_bytes_be()[16..].try_into()
+                        .map(u128::from_be_bytes)
+                        .unwrap_or(0);
+                    let high: u128 = result[1].to_bytes_be()[16..].try_into()
+                        .map(u128::from_be_bytes)
+                        .unwrap_or(0);
+
+                    let l2_root = U256::from(high) << 128 | U256::from(low);
+                    Ok(l2_root == root)
+                } else {
+                    // No root on L2 yet
+                    Ok(false)
+                }
+            }
+            Err(e) => {
+                // If call fails (e.g., NO_ROOTS_SEEN), the root doesn't exist yet
+                tracing::debug!("L2 latest_root call failed: {:#}, assuming root doesn't exist", e);
+                Ok(false)
+            }
+        }
     }
 }
