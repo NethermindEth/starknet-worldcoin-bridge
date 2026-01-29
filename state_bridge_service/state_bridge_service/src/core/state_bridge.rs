@@ -4,23 +4,29 @@ use crate::config::config::Config;
 use crate::config::utils::into_felt;
 use crate::config::{
     cli::Fee,
-    constants::defaults::{DEFAULT_FEE, NO_FEE},
+    constants::defaults::{
+        CACHE_CLEAR_INTERVAL, CACHE_MAX_SIZE, CHANNEL_CAPACITY, DEFAULT_FEE, MAX_ESTIMATED_FEE_WEI,
+        NO_FEE, POLL_INTERVAL, RECONNECT_BACKOFF_SECS, RECONNECT_POLL_DELAY,
+    },
 };
 use crate::core::transaction::{self, check_gas_limit};
-use crate::error::error::StateBridgeError;
+use crate::error::error::{StateBridgeError, TransactionError};
 use crate::telemetry::{BalanceMonitor, Metrics, MetricsExporter, TelemetryConfig};
 
+use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant as StdInstant};
 
 use ethers::contract::EthEvent;
-use ethers::providers::{Middleware, Provider as EthersProvider, PubsubClient, StreamExt, Ws};
+use ethers::providers::{Middleware, Provider, PubsubClient, StreamExt, Ws};
 use ethers::signers::Signer;
 use ethers::types::{Filter, U256};
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::JsonRpcTransport as StarknetJsonRpcTransport;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::time::sleep;
+use tokio::sync::Mutex;
+use tokio::time::{sleep, Instant};
 use tracing::{error, info, instrument, warn};
 
 /// Configuration for WebSocket reconnection behavior
@@ -28,25 +34,156 @@ use tracing::{error, info, instrument, warn};
 pub struct ReconnectionConfig {
     /// Maximum number of reconnection attempts (0 = infinite)
     pub max_retries: usize,
-    /// Initial delay between reconnection attempts
-    pub initial_delay: Duration,
-    /// Maximum delay between reconnection attempts
-    pub max_delay: Duration,
-    /// Multiplier for exponential backoff
-    pub backoff_multiplier: f64,
-    /// Timeout for connection attempts
-    pub connection_timeout: Duration,
+    /// Backoff schedule for reconnect attempts
+    pub backoff_schedule: Vec<Duration>,
 }
 
 impl Default for ReconnectionConfig {
     fn default() -> Self {
+        let backoff_schedule = RECONNECT_BACKOFF_SECS
+            .iter()
+            .map(|secs| Duration::from_secs(*secs))
+            .collect::<Vec<_>>();
+
         Self {
             max_retries: 0, // Infinite retries by default
-            initial_delay: Duration::from_secs(1),
-            max_delay: Duration::from_secs(60),
-            backoff_multiplier: 2.0,
-            connection_timeout: Duration::from_secs(30),
+            backoff_schedule,
         }
+    }
+}
+
+struct RootCache {
+    max_size: usize,
+    clear_interval: Duration,
+    last_clear_at: StdInstant,
+    order: VecDeque<U256>,
+    set: HashSet<U256>,
+}
+
+impl RootCache {
+    fn new(max_size: usize, clear_interval: Duration) -> Self {
+        Self {
+            max_size,
+            clear_interval,
+            last_clear_at: StdInstant::now(),
+            order: VecDeque::with_capacity(max_size),
+            set: HashSet::with_capacity(max_size),
+        }
+    }
+
+    fn maybe_clear(&mut self) {
+        if self.last_clear_at.elapsed() >= self.clear_interval {
+            self.order.clear();
+            self.set.clear();
+            self.last_clear_at = StdInstant::now();
+        }
+    }
+
+    fn contains(&mut self, root: &U256) -> bool {
+        self.maybe_clear();
+        self.set.contains(root)
+    }
+
+    fn insert(&mut self, root: U256) {
+        self.maybe_clear();
+        if self.set.insert(root) {
+            self.order.push_back(root);
+            if self.order.len() > self.max_size {
+                if let Some(evicted) = self.order.pop_front() {
+                    self.set.remove(&evicted);
+                }
+            }
+        }
+    }
+}
+
+struct Backoff {
+    delays: Vec<Duration>,
+    idx: usize,
+}
+
+impl Backoff {
+    fn new(delays: Vec<Duration>) -> Self {
+        Self { delays, idx: 0 }
+    }
+
+    fn reset(&mut self) {
+        self.idx = 0;
+    }
+
+    fn next_delay(&mut self) -> Duration {
+        let delay = self
+            .delays
+            .get(self.idx)
+            .copied()
+            .unwrap_or_else(|| *self.delays.last().unwrap_or(&Duration::from_secs(20)));
+        self.idx = self.idx.saturating_add(1);
+        delay
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{compute_next_poll_deadline, Backoff, PollSignal, RootCache};
+    use std::time::Duration;
+    use ethers::types::U256;
+    use tokio::time::Instant;
+
+    #[test]
+    fn root_cache_eviction() {
+        let mut cache = RootCache::new(2, Duration::from_secs(3600));
+        cache.insert(U256::from(1));
+        cache.insert(U256::from(2));
+        cache.insert(U256::from(3));
+
+        assert!(!cache.contains(&U256::from(1)));
+        assert!(cache.contains(&U256::from(2)));
+        assert!(cache.contains(&U256::from(3)));
+    }
+
+    #[test]
+    fn root_cache_clears_on_interval() {
+        let mut cache = RootCache::new(2, Duration::from_secs(0));
+        cache.insert(U256::from(1));
+        assert!(!cache.contains(&U256::from(1)));
+    }
+
+    #[test]
+    fn backoff_repeats_last_delay() {
+        let mut backoff = Backoff::new(vec![
+            Duration::from_secs(5),
+            Duration::from_secs(10),
+        ]);
+
+        assert_eq!(backoff.next_delay(), Duration::from_secs(5));
+        assert_eq!(backoff.next_delay(), Duration::from_secs(10));
+        assert_eq!(backoff.next_delay(), Duration::from_secs(10));
+    }
+
+    #[test]
+    fn poll_deadline_reset_and_expedite() {
+        let now = Instant::now();
+        let poll_interval = Duration::from_secs(60);
+        let reconnect_delay = Duration::from_secs(5);
+        let current_deadline = now + poll_interval;
+
+        let reset_deadline = compute_next_poll_deadline(
+            now,
+            current_deadline,
+            PollSignal::Reset,
+            poll_interval,
+            reconnect_delay,
+        );
+        assert_eq!(reset_deadline, now + poll_interval);
+
+        let expedite_deadline = compute_next_poll_deadline(
+            now,
+            current_deadline,
+            PollSignal::Expedite,
+            poll_interval,
+            reconnect_delay,
+        );
+        assert_eq!(expedite_deadline, now + reconnect_delay);
     }
 }
 
@@ -61,6 +198,37 @@ where
     metrics: Option<Metrics>,
     _metrics_exporter: Option<MetricsExporter>,
     reconnection_config: ReconnectionConfig,
+    cache: Arc<Mutex<RootCache>>,
+}
+
+pub(crate) struct QueuedEvent {
+    event: TreeChanged,
+    received_at: StdInstant,
+}
+
+pub enum PollSignal {
+    Reset,
+    Expedite,
+}
+
+pub fn compute_next_poll_deadline(
+    now: Instant,
+    current_deadline: Instant,
+    signal: PollSignal,
+    poll_interval: Duration,
+    reconnect_delay: Duration,
+) -> Instant {
+    match signal {
+        PollSignal::Reset => now + poll_interval,
+        PollSignal::Expedite => {
+            let expedite = now + reconnect_delay;
+            if expedite < current_deadline {
+                expedite
+            } else {
+                current_deadline
+            }
+        }
+    }
 }
 
 impl<M, T> StateBridge<M, T>
@@ -83,6 +251,10 @@ where
             metrics: None,
             _metrics_exporter: None,
             reconnection_config: Default::default(),
+            cache: Arc::new(Mutex::new(RootCache::new(
+                CACHE_MAX_SIZE,
+                CACHE_CLEAR_INTERVAL,
+            ))),
         })
     }
 
@@ -94,6 +266,10 @@ where
             metrics: None,
             _metrics_exporter: None,
             reconnection_config: Default::default(),
+            cache: Arc::new(Mutex::new(RootCache::new(
+                CACHE_MAX_SIZE,
+                CACHE_CLEAR_INTERVAL,
+            ))),
         })
     }
 
@@ -125,7 +301,7 @@ where
 
     #[instrument(skip(self))]
     pub async fn propagate_root(&self, value: U256) -> Result<(), StateBridgeError<M>> {
-        let tx_start = Instant::now();
+        let tx_start = StdInstant::now();
 
         let calldata = abi::abi::ISTATEBRIDGE_ABI
             .function("propagateRoot")?
@@ -142,7 +318,6 @@ where
         .await?;
 
         let gas_limit = *tx.gas().unwrap();
-        let mut transaction_success = false;
         let mut gas_used: Option<u64> = None;
 
         let result = if check_gas_limit(gas_limit) {
@@ -155,28 +330,133 @@ where
             .await
             {
                 Ok(receipt) => {
-                    transaction_success = true;
                     gas_used = receipt.gas_used.map(|g| g.as_u64());
                     Ok(())
                 }
                 Err(e) => {
-                    transaction_success = false;
                     Err(StateBridgeError::TransactionError(e))
                 }
             }
         } else {
             tracing::info!("Default gas limit exceeded");
-            transaction_success = false;
             Err(StateBridgeError::GasLimitError(gas_limit))
         };
 
         // Record transaction metrics if telemetry is enabled
         if let Some(metrics) = &self.metrics {
             let tx_duration = tx_start.elapsed().as_secs_f64();
-            metrics.record_transaction(transaction_success, gas_used, tx_duration);
+            metrics.record_transaction(result.is_ok(), gas_used, tx_duration);
         }
 
         result
+    }
+
+    async fn propagate_root_with_retry(&self, value: U256) -> Result<(), StateBridgeError<M>> {
+        let mut attempts = 0;
+        let retry_delays = [Duration::from_secs(1), Duration::from_secs(2)];
+
+        loop {
+            match self.propagate_root(value).await {
+                Ok(()) => return Ok(()),
+                Err(err) => {
+                    if !is_fast_fail(&err) || attempts >= retry_delays.len() {
+                        if matches!(
+                            &err,
+                            StateBridgeError::TransactionError(TransactionError::TxReceiptNotFound(_))
+                        ) {
+                            if let Some(metrics) = &self.metrics {
+                                metrics.record_tx_receipt_failure();
+                            }
+                        }
+
+                        if let Some(metrics) = &self.metrics {
+                            record_tx_error(metrics, &err);
+                        }
+
+                        return Err(err);
+                    }
+
+                    if let Some(metrics) = &self.metrics {
+                        metrics.record_tx_send_fail_fast();
+                    }
+
+                    let delay = retry_delays[attempts];
+                    attempts += 1;
+                    sleep(delay).await;
+                }
+            }
+        }
+    }
+
+    fn fee_to_u256(fee: Felt) -> U256 {
+        U256::from_big_endian(&fee.to_bytes_be())
+    }
+
+    fn cap_estimated_fee(fee: Felt) -> Felt {
+        if fee > MAX_ESTIMATED_FEE_WEI {
+            MAX_ESTIMATED_FEE_WEI
+        } else {
+            fee
+        }
+    }
+
+    async fn get_and_compare_roots(&self) -> eyre::Result<()> {
+        let (l1_root, l2_root) = self.fetch_roots().await?;
+
+        if l1_root == l2_root {
+            if let Some(metrics) = &self.metrics {
+                metrics.record_poll_synced_roots();
+            }
+            return Ok(());
+        }
+
+        {
+            let mut cache = self.cache.lock().await;
+            cache.insert(l1_root);
+        }
+
+        if let Some(metrics) = &self.metrics {
+            metrics.record_poll_unsynced_roots();
+        }
+
+        let root_as_felts = into_felt(l1_root)?;
+        let fee = match self.config.fee_type {
+            Fee::Default => DEFAULT_FEE,
+            Fee::Estimate => {
+                let estimated = self
+                    .config
+                    .estimate_messaging_fee(root_as_felts)
+                    .await?
+                    .overall_fee;
+                Self::cap_estimated_fee(estimated)
+            }
+            Fee::NoFee => NO_FEE,
+        };
+
+        self.propagate_root_with_retry(Self::fee_to_u256(fee))
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn compare_roots(&self) -> eyre::Result<bool> {
+        let (l1_root, l2_root) = self.fetch_roots().await?;
+        Ok(l1_root == l2_root)
+    }
+
+    async fn fetch_roots(&self) -> eyre::Result<(U256, U256)> {
+        let l1_root = self.config.get_l1_root_u256().await?;
+        let l2_root = self.config.get_l2_root_u256().await?;
+
+        if l1_root.is_zero() {
+            eyre::bail!("L1 latest_root is zero");
+        }
+
+        if l2_root.is_zero() {
+            eyre::bail!("L2 latest_root is zero");
+        }
+
+        Ok((l1_root, l2_root))
     }
 }
 
@@ -211,12 +491,14 @@ where
             None
         };
 
-        let (tx, rx) = mpsc::channel::<TreeChanged>(1);
+        let (tx, rx) = mpsc::channel::<QueuedEvent>(CHANNEL_CAPACITY);
+        let (poll_tx, poll_rx) = mpsc::channel::<PollSignal>(CHANNEL_CAPACITY);
 
         let listener_handle = {
             let sb = self.clone();
+            let poll_tx = poll_tx.clone();
             tokio::spawn(async move {
-                if let Err(e) = sb.listen_with_reconnect(tx).await {
+                if let Err(e) = sb.listen_with_reconnect(tx, poll_tx).await {
                     error!("listener exited permanently: {e:#}");
                 }
             })
@@ -231,13 +513,27 @@ where
             })
         };
 
+        let poller_handle = {
+            let sb = self.clone();
+            tokio::spawn(async move {
+                if let Err(e) = sb.poller(poll_rx).await {
+                    tracing::warn!("poller exited: {e:#}");
+                }
+            })
+        };
+
         // Join all handles
         match balance_monitor_handle {
             Some(monitor_handle) => {
-                tokio::try_join!(listener_handle, executor_handle, monitor_handle)?;
+                tokio::try_join!(
+                    listener_handle,
+                    executor_handle,
+                    poller_handle,
+                    monitor_handle
+                )?;
             }
             None => {
-                tokio::try_join!(listener_handle, executor_handle)?;
+                tokio::try_join!(listener_handle, executor_handle, poller_handle)?;
             }
         }
 
@@ -245,26 +541,125 @@ where
     }
 
     #[cfg(not(feature = "debug"))]
-    pub async fn execute(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
-        while let Some(evt) = rx.recv().await {
-            let root = into_felt(evt.post_root)?;
+    pub(crate) async fn execute(
+        self: Arc<Self>,
+        mut rx: Receiver<QueuedEvent>,
+    ) -> eyre::Result<()> {
+        while let Some(queued) = rx.recv().await {
+            if let Some(metrics) = &self.metrics {
+                let elapsed = queued.received_at.elapsed().as_secs_f64();
+                metrics.record_event_processing_latency(elapsed);
+            }
 
-            let fee = match self.config.fee_type {
-                Fee::Default => DEFAULT_FEE,
-                Fee::Estimate => self.config.estimate_messaging_fee(root).await?.overall_fee,
-                Fee::NoFee => NO_FEE,
-            };
+            let root = into_felt(queued.event.post_root)?;
 
-            self.propagate_root(fee.to_bytes_be().into()).await?;
+        let fee = match self.config.fee_type {
+            Fee::Default => DEFAULT_FEE,
+            Fee::Estimate => {
+                let estimated = self.config.estimate_messaging_fee(root).await?.overall_fee;
+                Self::cap_estimated_fee(estimated)
+            }
+            Fee::NoFee => NO_FEE,
+        };
+
+            if let Some(metrics) = &self.metrics {
+                let fee_value = U256::from_big_endian(&fee.to_bytes_be());
+                metrics.record_fee_value_wei(fee_value.as_u128() as f64);
+            }
+
+            self.propagate_root_with_retry(Self::fee_to_u256(fee))
+                .await?;
         }
 
         Ok(())
     }
 
+    async fn poller(self: Arc<Self>, mut poll_rx: Receiver<PollSignal>) -> eyre::Result<()> {
+        let poll_interval = POLL_INTERVAL;
+        let mut next_deadline = tokio::time::Instant::now() + poll_interval;
+
+        loop {
+            tokio::select! {
+                _ = tokio::time::sleep_until(next_deadline) => {
+                    if let Err(e) = self.get_and_compare_roots().await {
+                        tracing::warn!("poller error: {e:#}");
+                    }
+                    next_deadline = tokio::time::Instant::now() + poll_interval;
+                }
+                signal = poll_rx.recv() => {
+                    let now = tokio::time::Instant::now();
+                    match signal {
+                        Some(signal) => {
+                            next_deadline = compute_next_poll_deadline(
+                                now,
+                                next_deadline,
+                                signal,
+                                poll_interval,
+                                RECONNECT_POLL_DELAY,
+                            );
+                        }
+                        None => break,
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn connect_ws_provider(&self) -> eyre::Result<Provider<Ws>> {
+        let primary = self.config.l1_ws_primary();
+        match Ws::connect(primary).await {
+            Ok(ws) => Ok(Provider::new(ws)),
+            Err(primary_err) => {
+                if let Some(fallback) = self.config.l1_ws_fallback() {
+                    match Ws::connect(fallback).await {
+                        Ok(ws) => Ok(Provider::new(ws)),
+                        Err(fallback_err) => Err(eyre::eyre!(
+                            "Primary WS failed: {primary_err}; fallback WS failed: {fallback_err}"
+                        )),
+                    }
+                } else {
+                    Err(primary_err.into())
+                }
+            }
+        }
+    }
+
+    #[cfg(not(feature = "debug"))]
+    fn event_filter(&self) -> Filter {
+        Filter::new()
+            .address(self.config.identity_manager())
+            .event(&TreeChanged::abi_signature())
+    }
+
+    #[cfg(feature = "debug")]
+    fn event_filter(&self) -> Filter {
+        Filter::new()
+            .address(self.config.identity_manager())
+            .event(&TreeChanged::abi_signature())
+            .from_block(8204458)
+            .to_block(8204460)
+    }
+
     /// Listen for events with automatic reconnection on failure
-    pub async fn listen_with_reconnect(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
+    pub(crate) async fn listen_with_reconnect(
+        self: Arc<Self>,
+        tx: Sender<QueuedEvent>,
+        poll_tx: Sender<PollSignal>,
+    ) -> eyre::Result<()> {
+        let filter = self.event_filter();
+        self.listen_internal(tx, poll_tx, filter).await
+    }
+
+    async fn listen_internal(
+        self: Arc<Self>,
+        tx: Sender<QueuedEvent>,
+        poll_tx: Sender<PollSignal>,
+        filter: Filter,
+    ) -> eyre::Result<()> {
         let mut attempt = 0;
-        let mut delay = self.reconnection_config.initial_delay;
+        let mut backoff = Backoff::new(self.reconnection_config.backoff_schedule.clone());
 
         // Initialize connection status
         if let Some(metrics) = &self.metrics {
@@ -272,28 +667,28 @@ where
         }
 
         loop {
-            // Record connection attempt
+            attempt += 1;
             if let Some(metrics) = &self.metrics {
                 metrics.record_websocket_connection_attempt();
             }
 
-            match self.listen_once(tx.clone()).await {
-                Ok(_) => {
-                    info!("Event listener completed normally");
+            let provider = match self.connect_ws_provider().await {
+                Ok(provider) => {
                     if let Some(metrics) = &self.metrics {
-                        metrics.set_websocket_connected(false);
+                        metrics.record_websocket_connection_success();
+                        metrics.set_websocket_connected(true);
                     }
-                    break;
+                    let _ = poll_tx.send(PollSignal::Expedite).await;
+                    backoff.reset();
+                    provider
                 }
                 Err(e) => {
-                    attempt += 1;
-
-                    // Record connection failure
                     if let Some(metrics) = &self.metrics {
                         metrics.record_websocket_connection_failure();
+                        metrics.set_websocket_connected(false);
+                        metrics.record_websocket_backoff_retry();
                     }
 
-                    // Check if we've exceeded max retries (0 means infinite)
                     if self.reconnection_config.max_retries > 0
                         && attempt > self.reconnection_config.max_retries
                     {
@@ -304,109 +699,87 @@ where
                         return Err(e);
                     }
 
+                    let delay = backoff.next_delay();
                     warn!("WebSocket connection failed (attempt {}): {:#}", attempt, e);
-
-                    // Check if this is a potentially recoverable error
-                    if !self.is_recoverable_error(&e) {
-                        error!("Non-recoverable error encountered: {:#}", e);
-                        return Err(e);
-                    }
-
-                    info!(
-                        "Waiting {} seconds before reconnection attempt {}",
-                        delay.as_secs(),
-                        attempt + 1
-                    );
+                    info!("Waiting {} seconds before reconnection", delay.as_secs());
                     sleep(delay).await;
-
-                    // Exponential backoff with jitter
-                    delay = std::cmp::min(
-                        Duration::from_secs_f64(
-                            delay.as_secs_f64() * self.reconnection_config.backoff_multiplier,
-                        ),
-                        self.reconnection_config.max_delay,
-                    );
+                    continue;
                 }
-            }
-        }
+            };
 
-        Ok(())
-    }
-
-    /// Check if an error is potentially recoverable
-    fn is_recoverable_error(&self, error: &eyre::Error) -> bool {
-        let error_str = error.to_string().to_lowercase();
-
-        // These are typically recoverable network/connection errors
-        error_str.contains("connection")
-            || error_str.contains("timeout")
-            || error_str.contains("broken pipe")
-            || error_str.contains("network")
-            || error_str.contains("websocket")
-            || error_str.contains("io error")
-            || error_str.contains("transport")
-    }
-
-    /// Single attempt to listen for events (extracted from original listen method)
-    #[cfg(not(feature = "debug"))]
-    async fn listen_once(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
-        info!("Establishing WebSocket connection for event listening...");
-
-        let filter = Filter::new()
-            .address(self.config.identity_manager())
-            .event(&TreeChanged::abi_signature());
-
-        let l1_provider = self.config.l1_provider();
-
-        let mut stream = l1_provider
-            .subscribe_logs(&filter)
-            .await
-            .map_err(|e| eyre::eyre!("Failed to subscribe to logs: {}", e))?;
-
-        // Record successful connection
-        if let Some(metrics) = &self.metrics {
-            metrics.record_websocket_connection_success();
-        }
-
-        info!(
-            "WebSocket connection established, listening for TreeChanged events from {}",
-            self.config.identity_manager()
-        );
-
-        while let Some(log) = stream.next().await {
-            match TreeChanged::decode_log(&log.into()) {
-                Ok(evt) => {
-                    info!(
-                        "Received TreeChanged event: pre_root={}, post_root={}, kind={}",
-                        evt.pre_root, evt.post_root, evt.kind
-                    );
-
-                    if let Err(e) = tx.send(evt).await {
-                        warn!("Failed to send event to executor: {}", e);
-                        // Channel closed, likely shutting down
-                        return Ok(());
+            let mut stream = match provider.subscribe_logs(&filter).await {
+                Ok(stream) => stream,
+                Err(e) => {
+                    if let Some(metrics) = &self.metrics {
+                        metrics.record_websocket_connection_failure();
+                        metrics.set_websocket_connected(false);
+                        metrics.record_websocket_backoff_retry();
                     }
+                    let delay = backoff.next_delay();
+                    warn!("WS subscribe failed: {e:#}");
+                    info!("Waiting {} seconds before reconnection", delay.as_secs());
+                    sleep(delay).await;
+                    continue;
                 }
-                Err(e) => warn!("Failed to decode log as TreeChanged event: {:?}", e),
+            };
+
+            while let Some(log) = stream.next().await {
+                let _ = poll_tx.send(PollSignal::Reset).await;
+                match TreeChanged::decode_log(&log.into()) {
+                    Ok(evt) => {
+                        let root = evt.post_root;
+                        let mut cache = self.cache.lock().await;
+                        if cache.contains(&root) {
+                            if let Some(metrics) = &self.metrics {
+                                metrics.record_event_cache_hit();
+                            }
+                            continue;
+                        }
+
+                        cache.insert(root);
+                        if let Some(metrics) = &self.metrics {
+                            metrics.record_event_cache_miss();
+                        }
+                        drop(cache);
+
+                        let queued = QueuedEvent {
+                            event: evt,
+                            received_at: StdInstant::now(),
+                        };
+
+                        if let Err(e) = tx.send(queued).await {
+                            warn!("Failed to send event to executor: {}", e);
+                            return Ok(());
+                        }
+                    }
+                    Err(e) => warn!("Failed to decode log as TreeChanged event: {:?}", e),
+                }
             }
+
+            if let Some(metrics) = &self.metrics {
+                metrics.set_websocket_connected(false);
+                metrics.record_websocket_disconnect();
+                metrics.record_websocket_backoff_retry();
+            }
+
+            let delay = backoff.next_delay();
+            info!("WebSocket disconnected, retrying in {} seconds", delay.as_secs());
+            sleep(delay).await;
         }
-
-        warn!("WebSocket stream ended unexpectedly");
-        Err(eyre::eyre!("WebSocket stream closed"))
-    }
-
-    #[cfg(not(feature = "debug"))]
-    pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
-        self.listen_once(tx).await
     }
 
     #[cfg(feature = "debug")]
     #[instrument(skip(self, rx))]
-    pub async fn execute(self: Arc<Self>, mut rx: Receiver<TreeChanged>) -> eyre::Result<()> {
-        while let Some(evt) = rx.recv().await {
-            println!("got = {:?}", evt);
+    pub async fn execute(self: Arc<Self>, mut rx: Receiver<QueuedEvent>) -> eyre::Result<()> {
+        while let Some(queued) = rx.recv().await {
+            if let Some(metrics) = &self.metrics {
+                let elapsed = queued.received_at.elapsed().as_secs_f64();
+                metrics.record_event_processing_latency(elapsed);
+            }
 
-            let root = into_felt(evt.post_root)?;
+            println!("got = {:?}", queued.event);
+
+            let root = into_felt(queued.event.post_root)?;
 
             let fee = match self.config.fee_type {
                 Fee::Default => DEFAULT_FEE,
@@ -416,71 +789,55 @@ where
                     }
 
                     let dummy_root = self.config.get_root().await?;
-
-                    self.config
+                    let estimated = self
+                        .config
                         .estimate_messaging_fee(dummy_root)
                         .await?
-                        .overall_fee
+                        .overall_fee;
+
+                    Self::cap_estimated_fee(estimated)
                 }
                 Fee::NoFee => NO_FEE,
             };
 
-            self.propagate_root(fee.to_bytes_be().into()).await?;
-        }
-
-        Ok(())
-    }
-
-    /// Single attempt to listen for events (debug version with specific block range)
-    #[cfg(feature = "debug")]
-    #[instrument(skip(self, tx))]
-    async fn listen_once(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
-        info!("Establishing WebSocket connection for event listening (debug mode)...");
-
-        let filter = Filter::new()
-            .address(self.config.identity_manager())
-            .event(&TreeChanged::abi_signature())
-            .from_block(8204458)
-            .to_block(8204460);
-
-        let l1_provider = self.config.l1_provider();
-
-        let mut stream = l1_provider
-            .subscribe_logs(&filter)
-            .await
-            .map_err(|e| eyre::eyre!("Failed to subscribe to logs: {}", e))?;
-
-        // Record successful connection
-        if let Some(metrics) = &self.metrics {
-            metrics.record_websocket_connection_success();
-        }
-
-        info!("WebSocket connection established (debug mode), listening for TreeChanged events from {} (blocks 8204458-8204460)", self.config.identity_manager());
-
-        while let Some(log) = stream.next().await {
-            match TreeChanged::decode_log(&log.into()) {
-                Ok(evt) => {
-                    info!(
-                        "Received TreeChanged event (debug): pre_root={}, post_root={}, kind={}",
-                        evt.pre_root, evt.post_root, evt.kind
-                    );
-
-                    if let Err(e) = tx.send(evt).await {
-                        warn!("Failed to send event to executor: {}", e);
-                        return Ok(());
-                    }
-                }
-                Err(e) => warn!("Failed to decode log as TreeChanged event: {:?}", e),
+            if let Some(metrics) = &self.metrics {
+                let fee_value = U256::from_big_endian(&fee.to_bytes_be());
+                metrics.record_fee_value_wei(fee_value.as_u128() as f64);
             }
+
+            self.propagate_root_with_retry(Self::fee_to_u256(fee))
+                .await?;
         }
 
-        info!("Debug mode: finished processing block range");
         Ok(())
     }
 
-    #[cfg(feature = "debug")]
-    #[instrument(skip(self, tx))]
-    pub async fn listen(&self, tx: Sender<TreeChanged>) -> eyre::Result<()> {
-        self.listen_once(tx).await
+}
+
+fn is_fast_fail<M: Middleware>(err: &StateBridgeError<M>) -> bool {
+    matches!(
+        err,
+        StateBridgeError::ProviderError(_)
+            | StateBridgeError::TransactionError(TransactionError::MiddlewareError(_))
+            | StateBridgeError::TransactionError(TransactionError::ProviderError(_))
+    )
+}
+
+fn record_tx_error<M: Middleware>(metrics: &Metrics, err: &StateBridgeError<M>) {
+    match err {
+        StateBridgeError::TransactionError(TransactionError::InsufficientWalletFunds) => {
+            metrics.record_tx_error_insufficient_funds();
+        }
+        StateBridgeError::TransactionError(TransactionError::ProviderError(_))
+        | StateBridgeError::ProviderError(_) => {
+            metrics.record_tx_error_provider();
+        }
+        StateBridgeError::TransactionError(TransactionError::MiddlewareError(_)) => {
+            metrics.record_tx_error_middleware();
+        }
+        StateBridgeError::GasLimitError(_) => {
+            metrics.record_tx_error_gas_limit();
+        }
+        _ => {}
     }
 }

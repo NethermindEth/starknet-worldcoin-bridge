@@ -34,10 +34,12 @@ async fn main() -> Result<()> {
     // Configure WebSocket reconnection behavior
     let reconnection_config = ReconnectionConfig {
         max_retries: 0, // Infinite retries for production
-        initial_delay: Duration::from_secs(2),
-        max_delay: Duration::from_secs(60),
-        backoff_multiplier: 1.0,
-        connection_timeout: Duration::from_secs(30),
+        backoff_schedule: vec![
+            Duration::from_secs(5),
+            Duration::from_secs(10),
+            Duration::from_secs(15),
+            Duration::from_secs(20),
+        ],
     };
 
     let state_bridge = StateBridge::from_config(config)?
@@ -47,7 +49,7 @@ async fn main() -> Result<()> {
 
     tracing::info!("Starting State Bridge with telemetry and reconnection enabled");
     tracing::info!("Metrics available at: http://0.0.0.0:9091/metrics");
-    tracing::info!("WebSocket reconnection: enabled with backoff (2s)");
+    tracing::info!("WebSocket reconnection: enabled with backoff schedule");
 
     Arc::new(state_bridge).start().await?;
 

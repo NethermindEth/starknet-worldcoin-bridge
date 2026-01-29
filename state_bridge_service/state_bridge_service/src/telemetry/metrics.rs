@@ -37,6 +37,12 @@ pub struct Metrics {
     /// Transaction execution time
     pub transaction_duration: Histogram,
 
+    /// Event processing latency (log received -> tx submit)
+    pub event_processing_latency: Histogram,
+
+    /// Last observed fee value (wei)
+    pub fee_value_wei: Gauge,
+
     /// Service uptime in seconds
     pub service_uptime: Gauge,
 
@@ -54,6 +60,42 @@ pub struct Metrics {
 
     /// Current WebSocket connection status (1 = connected, 0 = disconnected)
     pub websocket_connection_status: Gauge,
+
+    /// WebSocket disconnect count
+    pub websocket_disconnects: Counter,
+
+    /// WebSocket backoff retries
+    pub websocket_backoff_retries: Counter,
+
+    /// Event cache hits (deduped events)
+    pub event_cache_hits: Counter,
+
+    /// Event cache misses (processed events)
+    pub event_cache_misses: Counter,
+
+    /// Poll cycles with synced roots
+    pub poll_synced_roots: Counter,
+
+    /// Poll cycles with unsynced roots
+    pub poll_unsynced_roots: Counter,
+
+    /// Fast-fail transaction retries
+    pub tx_send_fail_fast: Counter,
+
+    /// Transaction receipt failures
+    pub tx_receipt_failures: Counter,
+
+    /// Transaction errors: insufficient funds
+    pub tx_error_insufficient_funds: Counter,
+
+    /// Transaction errors: provider error
+    pub tx_error_provider: Counter,
+
+    /// Transaction errors: middleware error
+    pub tx_error_middleware: Counter,
+
+    /// Transaction errors: gas limit exceeded
+    pub tx_error_gas_limit: Counter,
 }
 
 impl Metrics {
@@ -74,6 +116,10 @@ impl Metrics {
             transactions_failed: metrics::counter!("state_bridge_transactions_failed_total"),
             gas_used: metrics::histogram!("state_bridge_gas_used"),
             transaction_duration: metrics::histogram!("state_bridge_transaction_duration_seconds"),
+            event_processing_latency: metrics::histogram!(
+                "state_bridge_event_processing_latency_seconds"
+            ),
+            fee_value_wei: metrics::gauge!("state_bridge_fee_value_wei"),
             service_uptime: metrics::gauge!("state_bridge_service_uptime_seconds"),
             last_balance_update: metrics::gauge!("state_bridge_last_balance_update_timestamp"),
             websocket_connections_attempted: metrics::counter!(
@@ -88,6 +134,22 @@ impl Metrics {
             websocket_connection_status: metrics::gauge!(
                 "state_bridge_websocket_connection_status"
             ),
+            websocket_disconnects: metrics::counter!("state_bridge_websocket_disconnects_total"),
+            websocket_backoff_retries: metrics::counter!(
+                "state_bridge_websocket_backoff_retries_total"
+            ),
+            event_cache_hits: metrics::counter!("state_bridge_event_cache_hits_total"),
+            event_cache_misses: metrics::counter!("state_bridge_event_cache_misses_total"),
+            poll_synced_roots: metrics::counter!("state_bridge_poll_synced_roots_total"),
+            poll_unsynced_roots: metrics::counter!("state_bridge_poll_unsynced_roots_total"),
+            tx_send_fail_fast: metrics::counter!("state_bridge_tx_send_fail_fast_total"),
+            tx_receipt_failures: metrics::counter!("state_bridge_tx_receipt_failures_total"),
+            tx_error_insufficient_funds: metrics::counter!(
+                "state_bridge_tx_error_insufficient_funds_total"
+            ),
+            tx_error_provider: metrics::counter!("state_bridge_tx_error_provider_total"),
+            tx_error_middleware: metrics::counter!("state_bridge_tx_error_middleware_total"),
+            tx_error_gas_limit: metrics::counter!("state_bridge_tx_error_gas_limit_total"),
         }
     }
 
@@ -157,6 +219,62 @@ impl Metrics {
     pub fn set_websocket_connected(&self, connected: bool) {
         self.websocket_connection_status
             .set(if connected { 1.0 } else { 0.0 });
+    }
+
+    pub fn record_websocket_disconnect(&self) {
+        self.websocket_disconnects.increment(1);
+    }
+
+    pub fn record_websocket_backoff_retry(&self) {
+        self.websocket_backoff_retries.increment(1);
+    }
+
+    pub fn record_event_cache_hit(&self) {
+        self.event_cache_hits.increment(1);
+    }
+
+    pub fn record_event_cache_miss(&self) {
+        self.event_cache_misses.increment(1);
+    }
+
+    pub fn record_poll_synced_roots(&self) {
+        self.poll_synced_roots.increment(1);
+    }
+
+    pub fn record_poll_unsynced_roots(&self) {
+        self.poll_unsynced_roots.increment(1);
+    }
+
+    pub fn record_tx_send_fail_fast(&self) {
+        self.tx_send_fail_fast.increment(1);
+    }
+
+    pub fn record_tx_receipt_failure(&self) {
+        self.tx_receipt_failures.increment(1);
+    }
+
+    pub fn record_event_processing_latency(&self, duration_secs: f64) {
+        self.event_processing_latency.record(duration_secs);
+    }
+
+    pub fn record_fee_value_wei(&self, value_wei: f64) {
+        self.fee_value_wei.set(value_wei);
+    }
+
+    pub fn record_tx_error_insufficient_funds(&self) {
+        self.tx_error_insufficient_funds.increment(1);
+    }
+
+    pub fn record_tx_error_provider(&self) {
+        self.tx_error_provider.increment(1);
+    }
+
+    pub fn record_tx_error_middleware(&self) {
+        self.tx_error_middleware.increment(1);
+    }
+
+    pub fn record_tx_error_gas_limit(&self) {
+        self.tx_error_gas_limit.increment(1);
     }
 }
 
