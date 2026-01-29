@@ -29,8 +29,17 @@ pub mod defaults {
     pub const BLOCK_CONFIRMATIONS: usize = 0;
     pub const DEFAULT_GAS: u32 = 300000;
     pub const DEFAULT_FEE: Felt = felt!("1000000000");
+    // 0.001 ETH in wei
+    pub const MAX_ESTIMATED_FEE_WEI: Felt = felt!("10000000000000");
     pub const NO_FEE: Felt = felt!("0");
 
     pub const HANDLE_RECEIVE_ROOT_SELECTOR: &str =
         "0x01ec02fa6378eca6ce8f976f7e74ad1a2241692571db908bc34270508d025cf4";
+
+    pub const CHANNEL_CAPACITY: usize = 100;
+    pub const CACHE_MAX_SIZE: usize = 10_000;
+    pub const CACHE_CLEAR_INTERVAL: Duration = Duration::from_secs(86_400); // 24 hours
+    pub const POLL_INTERVAL: Duration = Duration::from_secs(1_800); // 0.5 hour
+    pub const RECONNECT_POLL_DELAY: Duration = Duration::from_secs(300); // 5 min
+    pub const RECONNECT_BACKOFF_SECS: [u64; 4] = [5, 10, 15, 20];
 }

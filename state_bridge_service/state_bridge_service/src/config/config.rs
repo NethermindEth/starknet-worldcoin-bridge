@@ -1,17 +1,20 @@
-use crate::abi::abi::IWorldIDRouter;
+use crate::abi::abi::IIdentityManager;
 use crate::config::cli::{Cli, Fee, Network};
 use crate::config::constants::{
     addresses::*, chain_ids::*, defaults::HANDLE_RECEIVE_ROOT_SELECTOR,
 };
-use crate::config::utils::into_felt;
+use crate::config::utils::{felts_to_u256, into_felt};
 
 use std::sync::Arc;
 
 use dotenv::dotenv;
 use ethers::providers::{Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
-use ethers::types::{Address, H160};
-use starknet::core::types::{BlockId, BlockTag, EthAddress, FeeEstimate, Felt, MsgFromL1};
+use ethers::types::{Address, H160, U256};
+use starknet::core::types::{
+    BlockId, BlockTag, EthAddress, FeeEstimate, Felt, FunctionCall, MsgFromL1,
+};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport as StarknetJsonRpcTransport};
 use starknet::providers::{
     JsonRpcClient as StarknetJsonRPClient, Provider as StarknetProvider, Url,
@@ -29,6 +32,8 @@ where
     pub world_address_book: WorldAddressBook,
     pub bridge_address_book: BridgeAddressBook,
     pub fee_type: Fee,
+    pub l1_ws_primary: String,
+    pub l1_ws_fallback: Option<String>,
 }
 
 pub struct EnvironmentConfig {
@@ -90,6 +95,7 @@ impl Config<EthersProvider<Ws>, HttpTransport> {
 
         let (
             ethers_ws_provider,
+            ethers_ws_fallback,
             starknet_http_provider,
             private_key,
             chain_id,
@@ -98,6 +104,7 @@ impl Config<EthersProvider<Ws>, HttpTransport> {
         ) = match cli.network {
             Network::Sepolia => (
                 std::env::var("SEPOLIA_ETHEREUM_WS_PROVIDER").unwrap(),
+                std::env::var("SEPOLIA_ETHEREUM_WS_PROVIDER_FALLBACK").ok(),
                 std::env::var("SEPOLIA_STARKNET_HTTP_PROVIDER").unwrap(),
                 std::env::var("SEPOLIA_ETHEREUM_PRIVATE_KEY").unwrap(),
                 SEPOLIA_CHAIN_ID,
@@ -106,6 +113,7 @@ impl Config<EthersProvider<Ws>, HttpTransport> {
             ),
             Network::Mainnet => (
                 std::env::var("MAINNET_ETHEREUM_WS_PROVIDER").unwrap(),
+                std::env::var("MAINNET_ETHEREUM_WS_PROVIDER_FALLBACK").ok(),
                 std::env::var("MAINNET_STARKNET_HTTP_PROVIDER").unwrap(),
                 std::env::var("MAINNET_ETHEREUM_PRIVATE_KEY").unwrap(),
                 MAINNET_CHAIN_ID,
@@ -114,7 +122,7 @@ impl Config<EthersProvider<Ws>, HttpTransport> {
             ),
         };
 
-        let ethers_ws = Ws::connect(ethers_ws_provider).await?;
+        let ethers_ws = Ws::connect(ethers_ws_provider.clone()).await?;
         let starknet_http = HttpTransport::new(Url::parse(&starknet_http_provider)?);
         let ethers_provider = EthersProvider::new(ethers_ws);
         let starknet_provider = StarknetJsonRPClient::new(starknet_http);
@@ -127,6 +135,8 @@ impl Config<EthersProvider<Ws>, HttpTransport> {
             owner: wallet,
             world_address_book,
             bridge_address_book,
+            l1_ws_primary: ethers_ws_provider,
+            l1_ws_fallback: ethers_ws_fallback,
         })
     }
 }
@@ -156,6 +166,14 @@ where
         self.l2_provider.clone()
     }
 
+    pub fn l1_ws_primary(&self) -> &str {
+        &self.l1_ws_primary
+    }
+
+    pub fn l1_ws_fallback(&self) -> Option<&str> {
+        self.l1_ws_fallback.as_deref()
+    }
+
     pub async fn estimate_messaging_fee(&self, root: Vec<Felt>) -> eyre::Result<FeeEstimate> {
         let l1_msg = self.build_msg_from_l1(root).await?;
         let fee = self
@@ -182,8 +200,8 @@ where
 
     #[cfg(not(feature = "debug"))]
     pub async fn get_root(&self) -> eyre::Result<Vec<Felt>> {
-        let identity_manager_contract = IWorldIDRouter::new(
-            self.world_address_book.worldid_router,
+        let identity_manager_contract = IIdentityManager::new(
+            self.world_address_book.identity_manager,
             self.l1_provider.clone(),
         );
 
@@ -194,6 +212,33 @@ where
         Ok(root)
     }
 
+    #[cfg(not(feature = "debug"))]
+    pub async fn get_l1_root_u256(&self) -> eyre::Result<U256> {
+        let identity_manager_contract = IIdentityManager::new(
+            self.world_address_book.identity_manager,
+            self.l1_provider.clone(),
+        );
+
+        Ok(identity_manager_contract.latest_root().await?)
+    }
+
+    #[cfg(not(feature = "debug"))]
+    pub async fn get_l2_root_u256(&self) -> eyre::Result<U256> {
+        let selector = get_selector_from_name("latest_root")?;
+        let call = FunctionCall {
+            contract_address: self.bridge_address_book.bridge_l2,
+            entry_point_selector: selector,
+            calldata: Vec::new(),
+        };
+
+        let result = self
+            .l2_provider
+            .call(call, BlockId::Tag(BlockTag::Latest))
+            .await?;
+
+        felts_to_u256(&result)
+    }
+
     // For estimating fees when latest root is already propagated.
     #[cfg(feature = "debug")]
     pub async fn get_root(&self) -> eyre::Result<Vec<Felt>> {
@@ -201,5 +246,15 @@ where
         let dummy_root_1 = Felt::from(2_u128 << 128 - 1);
 
         Ok(vec![dummy_root_0, dummy_root_1])
+    }
+
+    #[cfg(feature = "debug")]
+    pub async fn get_l1_root_u256(&self) -> eyre::Result<U256> {
+        Ok(U256::from(2_u128 << 128 - 1))
+    }
+
+    #[cfg(feature = "debug")]
+    pub async fn get_l2_root_u256(&self) -> eyre::Result<U256> {
+        Ok(U256::from(2_u128 << 128 - 1))
     }
 }
