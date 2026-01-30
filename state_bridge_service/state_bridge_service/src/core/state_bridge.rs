@@ -1,6 +1,6 @@
 use crate::abi::{self, TreeChanged};
 use crate::config::bridge_config::BridgeConfig;
-use crate::config::config::Config;
+use crate::config::config::{Config, L2RootResult};
 use crate::config::utils::into_felt;
 use crate::config::{
     cli::Fee,
@@ -402,12 +402,13 @@ where
 
     async fn get_and_compare_roots(&self) -> eyre::Result<()> {
         let (l1_root, l2_root) = self.fetch_roots().await?;
-
-        if l1_root == l2_root {
-            if let Some(metrics) = &self.metrics {
-                metrics.record_poll_synced_roots();
+        if let L2RootResult::Root(l2_root) = l2_root {
+            if l1_root == l2_root {
+                if let Some(metrics) = &self.metrics {
+                    metrics.record_poll_synced_roots();
+                }
+                return Ok(());
             }
-            return Ok(());
         }
 
         {
@@ -441,19 +442,27 @@ where
 
     pub async fn compare_roots(&self) -> eyre::Result<bool> {
         let (l1_root, l2_root) = self.fetch_roots().await?;
-        Ok(l1_root == l2_root)
+        match l2_root {
+            L2RootResult::Root(l2_root) => Ok(l1_root == l2_root),
+            L2RootResult::NoRootsSeen => {
+                tracing::info!("L2 latest_root not available (NO_ROOTS_SEEN)");
+                Ok(true)
+            }
+        }
     }
 
-    async fn fetch_roots(&self) -> eyre::Result<(U256, U256)> {
+    async fn fetch_roots(&self) -> eyre::Result<(U256, L2RootResult)> {
         let l1_root = self.config.get_l1_root_u256().await?;
-        let l2_root = self.config.get_l2_root_u256().await?;
+        let l2_root = self.config.get_l2_root_result().await?;
 
         if l1_root.is_zero() {
             eyre::bail!("L1 latest_root is zero");
         }
 
-        if l2_root.is_zero() {
-            eyre::bail!("L2 latest_root is zero");
+        if let L2RootResult::Root(l2_root) = &l2_root {
+            if l2_root.is_zero() {
+                eyre::bail!("L2 latest_root is zero");
+            }
         }
 
         Ok((l1_root, l2_root))
@@ -553,14 +562,14 @@ where
 
             let root = into_felt(queued.event.post_root)?;
 
-        let fee = match self.config.fee_type {
-            Fee::Default => DEFAULT_FEE,
+            let fee = match self.config.fee_type {
+                Fee::Default => DEFAULT_FEE,
             Fee::Estimate => {
                 let estimated = self.config.estimate_messaging_fee(root).await?.overall_fee;
                 Self::cap_estimated_fee(estimated)
             }
-            Fee::NoFee => NO_FEE,
-        };
+                Fee::NoFee => NO_FEE,
+            };
 
             if let Some(metrics) = &self.metrics {
                 let fee_value = U256::from_big_endian(&fee.to_bytes_be());
@@ -831,7 +840,7 @@ fn record_tx_error<M: Middleware>(metrics: &Metrics, err: &StateBridgeError<M>) 
         StateBridgeError::TransactionError(TransactionError::ProviderError(_))
         | StateBridgeError::ProviderError(_) => {
             metrics.record_tx_error_provider();
-        }
+                }
         StateBridgeError::TransactionError(TransactionError::MiddlewareError(_)) => {
             metrics.record_tx_error_middleware();
         }
