@@ -42,3 +42,4 @@ EXPOSE 9091
 
 ENTRYPOINT ["/usr/local/bin/state_bridge_relay"]
 CMD ["--network" ,"sepolia", "--fee", "estimate"] 
+#CMD ["--network" ,"mainnet", "--fee", "estimate"] 
