@@ -11,8 +11,8 @@ pub mod addresses {
     pub const SEPOLIA_BRIDGE_L1: &str = "0x5aA8058C1E090d8299162b021e32a284Ec55f3D0";
     pub const SEPOLIA_BRIDGE_L2: &str =
         "0x01167d6979330fcc6633111d72416322eb0e3b78ad147a9338abea3c04edfc8a";
-    pub const MAINNET_BRIDGE_L1: &str = "";
-    pub const MAINNET_BRIDGE_L2: &str = "";
+    pub const MAINNET_BRIDGE_L1: &str = "0x651065427cB3022839764b142c6098c1833Df6DD";
+    pub const MAINNET_BRIDGE_L2: &str = "0x01794b8e558902e1e6a1d122d94de40fc7d482d11ea7f8e5cb56dd393646a378";
 }
 
 pub mod chain_ids {
