@@ -20,6 +20,22 @@ require_env() {
   fi
 }
 
+source_shell_rc() {
+  local rc_files=(
+    "$HOME/.bashrc"
+    "$HOME/.bash_profile"
+    "$HOME/.zshrc"
+    "$HOME/.zprofile"
+  )
+  local rc_file
+  for rc_file in "${rc_files[@]}"; do
+    if [[ -f "$rc_file" ]]; then
+      # shellcheck disable=SC1090
+      . "$rc_file"
+    fi
+  done
+}
+
 SCARB_VERSION="${SCARB_VERSION:-2.11.4}"
 SNCAST_VERSION="${SNCAST_VERSION:-0.55.0}"
 SNCAST_ACCOUNT_NAME="${SNCAST_ACCOUNT_NAME:-starknet_world_bridge_deployer}"
@@ -38,11 +54,8 @@ require_env "L2_SEQUENCER_ADDRESS"
 echo "==> Installing Scarb $SCARB_VERSION"
 curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v "$SCARB_VERSION"
 
-if [[ -f "$HOME/.bashrc" ]]; then
-  # Make sure newly installed tools are on PATH for this script.
-  # shellcheck disable=SC1090
-  . "$HOME/.bashrc"
-fi
+# Make sure newly installed tools are on PATH for this script.
+source_shell_rc
 
 scarb_version_installed="$(scarb --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
 if [[ "$scarb_version_installed" != "$SCARB_VERSION" ]]; then
@@ -64,10 +77,7 @@ if [[ $starkup_status -ne 0 ]]; then
   fi
 fi
 
-if [[ -f "$HOME/.bashrc" ]]; then
-  # shellcheck disable=SC1090
-  . "$HOME/.bashrc"
-fi
+source_shell_rc
 
 sncast_version_installed="$(sncast --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
 if [[ "$sncast_version_installed" != "$SNCAST_VERSION" ]]; then
@@ -85,10 +95,7 @@ sncast account import \
 
 echo "==> Installing Foundry"
 curl -L https://foundry.paradigm.xyz | bash
-if [[ -f "$HOME/.bashrc" ]]; then
-  # shellcheck disable=SC1090
-  . "$HOME/.bashrc"
-fi
+source_shell_rc
 foundryup
 
 echo "==> Deploying L1 StarkStateBridge"
