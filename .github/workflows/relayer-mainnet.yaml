@@ -1,0 +1,60 @@
+name: Build and Push relayer mainnet image on jfrog for staging
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  DOCKER_REGISTRY: nethermind.jfrog.io
+  JFROG_REPOSITORY: nubia-oci-local-staging
+  AGENT_NAME: relayer-mainnet
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  push-state-bridge-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Verify ORAS version
+        run: oras version
+
+      - name: Log in to Docker registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.ARTIFACTORY_NUBIA_USERNAME }}
+          password: ${{ secrets.ARTIFACTORY_NUBIA_TOKEN_DEVELOPER }}
+
+      - name: Login to registry with ORAS
+        run: |
+          oras login ${{ env.DOCKER_REGISTRY }} \
+            -u ${{ secrets.ARTIFACTORY_NUBIA_USERNAME }} \
+            -p ${{ secrets.ARTIFACTORY_NUBIA_TOKEN_DEVELOPER }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./state_bridge_service
+          platforms: "linux/amd64"
+          push: true
+          file: ./state_bridge_service/Dockerfile.mainnet
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.JFROG_REPOSITORY }}/${{ env.AGENT_NAME }}:${{ github.sha }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.JFROG_REPOSITORY }}/${{ env.AGENT_NAME }}:latest
+          build-args: |
+            GITHUB_SHA=${{ github.sha }}
