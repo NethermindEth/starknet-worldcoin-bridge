@@ -12,12 +12,13 @@ use ethers::providers::{Middleware, Provider as EthersProvider, Ws};
 use ethers::signers::{LocalWallet, Signer};
 use ethers::types::{Address, H160, U256};
 use starknet::core::types::{
-    BlockId, BlockTag, EthAddress, FeeEstimate, Felt, FunctionCall, MsgFromL1,
+    BlockId, BlockTag, ContractExecutionError, EthAddress, FeeEstimate, Felt, FunctionCall,
+    MsgFromL1, StarknetError,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport as StarknetJsonRpcTransport};
 use starknet::providers::{
-    JsonRpcClient as StarknetJsonRPClient, Provider as StarknetProvider, Url,
+    JsonRpcClient as StarknetJsonRPClient, Provider as StarknetProvider, ProviderError, Url,
 };
 
 #[derive(Clone, Debug)]
@@ -39,6 +40,12 @@ where
 pub struct EnvironmentConfig {
     pub http_local: String,
     pub test_private_key: String,
+}
+
+#[derive(Clone, Debug)]
+pub enum L2RootResult {
+    Root(U256),
+    NoRootsSeen,
 }
 
 #[derive(Clone, Debug)]
@@ -223,7 +230,7 @@ where
     }
 
     #[cfg(not(feature = "debug"))]
-    pub async fn get_l2_root_u256(&self) -> eyre::Result<U256> {
+    pub async fn get_l2_root_result(&self) -> eyre::Result<L2RootResult> {
         let selector = get_selector_from_name("latest_root")?;
         let call = FunctionCall {
             contract_address: self.bridge_address_book.bridge_l2,
@@ -231,12 +238,39 @@ where
             calldata: Vec::new(),
         };
 
+        tracing::info!(
+            l2_contract = %self.bridge_address_book.bridge_l2,
+            selector = %selector,
+            "Calling L2 latest_root()"
+        );
+
         let result = self
             .l2_provider
             .call(call, BlockId::Tag(BlockTag::Latest))
-            .await?;
+            .await;
 
-        felts_to_u256(&result)
+        match result {
+            Ok(result) => Ok(L2RootResult::Root(felts_to_u256(&result)?)),
+            Err(err) => {
+                if is_no_roots_error(&err) {
+                    tracing::info!("L2 latest_root() returned NO_ROOTS_SEEN");
+                    Ok(L2RootResult::NoRootsSeen)
+                } else {
+                    tracing::warn!(error = ?err, "L2 latest_root() call failed");
+                    Err(err.into())
+                }
+            }
+        }
+    }
+
+    #[cfg(not(feature = "debug"))]
+    pub async fn get_l2_root_u256(&self) -> eyre::Result<U256> {
+        match self.get_l2_root_result().await? {
+            L2RootResult::Root(root) => Ok(root),
+            L2RootResult::NoRootsSeen => {
+                eyre::bail!("L2 latest_root not available (NO_ROOTS_SEEN)")
+            }
+        }
     }
 
     // For estimating fees when latest root is already propagated.
@@ -254,7 +288,37 @@ where
     }
 
     #[cfg(feature = "debug")]
+    pub async fn get_l2_root_result(&self) -> eyre::Result<L2RootResult> {
+        Ok(L2RootResult::Root(U256::from(2_u128 << 128 - 1)))
+    }
+
+    #[cfg(feature = "debug")]
     pub async fn get_l2_root_u256(&self) -> eyre::Result<U256> {
         Ok(U256::from(2_u128 << 128 - 1))
     }
+}
+
+fn is_no_roots_error(error: &ProviderError) -> bool {
+    if let ProviderError::StarknetError(StarknetError::ContractError(data)) = error {
+        return contract_error_contains_no_roots(&data.revert_error);
+    }
+
+    let msg = error.to_string();
+    is_no_roots_seen_message(&msg)
+}
+
+fn contract_error_contains_no_roots(error: &ContractExecutionError) -> bool {
+    match error {
+        ContractExecutionError::Message(msg) => is_no_roots_seen_message(msg),
+        ContractExecutionError::Nested(inner) => {
+            let msg = format!("{:?}", inner.error);
+            is_no_roots_seen_message(&msg)
+        }
+    }
+}
+
+fn is_no_roots_seen_message(message: &str) -> bool {
+    let upper = message.to_uppercase();
+    upper.contains("NO_ROOTS_SEEN")
+        || upper.contains("4E4F5F524F4F54535F5345454E")
 }

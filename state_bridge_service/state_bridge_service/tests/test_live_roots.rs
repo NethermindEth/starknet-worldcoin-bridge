@@ -1,5 +1,5 @@
 use state_bridge_service::config::cli::{Cli, Fee, Network};
-use state_bridge_service::config::config::Config;
+use state_bridge_service::config::config::{Config, L2RootResult};
 use state_bridge_service::core::state_bridge::StateBridge;
 
 use dotenv::dotenv;
@@ -23,8 +23,13 @@ async fn test_live_get_and_compare_roots() -> eyre::Result<()> {
     };
 
     let config = Config::new_from_cli(&cli).await?;
+    let l2_result = config.get_l2_root_result().await?;
     let bridge = StateBridge::from_config(config)?;
     let roots_match = bridge.compare_roots().await?;
+
+    if matches!(l2_result, L2RootResult::NoRootsSeen) {
+        return Ok(());
+    }
 
     assert!(roots_match, "Expected L1/L2 roots to match");
     Ok(())
