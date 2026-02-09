@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>Worldcoin <=> Starknet Bridge</h1>
+  <h1>WorldID <=> Starknet Bridge</h1>
 </div>
 
 ## About
@@ -20,6 +20,6 @@ L1 address: https://etherscan.io/address/0x651065427cB3022839764b142c6098c1833Df
 
 L2 address: https://voyager.online/contract/0x01794b8e558902e1e6a1d122d94de40fc7d482d11ea7f8e5cb56dd393646a378#transactions
 
-## Disclaimer
-Contracts are not yet audited.
+## Audits
+Audits - [LINK](https://github.com/NethermindEth/starknet-worldcoin-bridge/tree/main/audits)
 
