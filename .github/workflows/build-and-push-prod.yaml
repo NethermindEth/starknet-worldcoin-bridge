@@ -1,4 +1,4 @@
-name: Build and Push Prod Images
+name: Build and Push State Bridge Image on Prod
 
 on:
   workflow_call:
