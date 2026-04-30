@@ -1,0 +1,30 @@
+name: Build and Push Prod Images
+
+on:
+  workflow_call:
+    inputs:
+      version_tag:
+        description: "Version tag for the release (e.g., v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: read
+
+jobs:
+  build-state-bridge-image-prod:
+  name: Build and Push State Bridge Image
+  uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v2.0.0
+  with:
+    repo_name: nubia-oci-local-prod
+    image_name: state-bridge-mainnet
+    platforms: "linux/amd64"
+    ignore_trivy: true
+    context: ./state_bridge_service
+    dockerfile_path: ./state_bridge_service/Dockerfile.mainnet
+    additional_tags: ${{ inputs.version_tag }}
+    docker_build_args: |
+      GITHUB_SHA=${{ github.sha }}
+    push: false

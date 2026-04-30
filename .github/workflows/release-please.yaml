@@ -1,0 +1,37 @@
+name: Release Please
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        description: "Release type (simple, node, python, etc.)"
+        required: true
+        type: string
+    outputs:
+      releases_created:
+        description: "Whether a release was created"
+        value: ${{ jobs.release.outputs.releases_created }}
+      tag_name:
+        description: "The tag name of the release"
+        value: ${{ jobs.release.outputs.tag_name }}
+      release_name:
+        description: "The name of the release"
+        value: ${{ jobs.release.outputs.release_name }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      release_name: ${{ steps.release.outputs.release_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: ${{ inputs.release_type }}
