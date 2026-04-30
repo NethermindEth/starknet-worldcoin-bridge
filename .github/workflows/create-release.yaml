@@ -1,0 +1,43 @@
+name: Create Release Summary
+
+on:
+  workflow_call:
+    inputs:
+      version_tag:
+        description: "Version tag for the release"
+        required: true
+        type: string
+      release_name:
+        description: "Name of the release"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  summary:
+    name: Release Summary
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print release summary
+        run: |
+          echo "========================================"
+          echo "Release Complete"
+          echo "========================================"
+          echo "Version: ${{ inputs.version_tag }}"
+          echo "Release: ${{ inputs.release_name }}"
+          echo "Source commit: ${{ github.sha }}"
+          echo ""
+          echo "Images pushed to JFrog:"
+          echo "Backend:"
+          echo "- nethermind.jfrog.io/nubia-oci-local-prod/state-bridge-mainnet:${{ inputs.version_tag }}"
+          echo "- nethermind.jfrog.io/nubia-oci-local-prod/state-bridge-mainnet:latest"
+          echo "Frontend:"
+          echo "- nethermind.jfrog.io/nubia-oci-local-prod/state-bridge-mainnet:${{ inputs.version_tag }}"
+          echo "- nethermind.jfrog.io/nubia-oci-local-prod/state-bridge-mainnet:latest"
+          echo ""
+          echo "GitHub Release:"
+          echo "- ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.version_tag }}"
+          echo "========================================"

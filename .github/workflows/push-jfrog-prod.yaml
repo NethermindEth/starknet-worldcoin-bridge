@@ -1,0 +1,52 @@
+name: Build and Push images on jfrog prod
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: write
+  pull-requests: write
+
+  build-state-bridge-image-prod:
+    uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v2.0.0
+    with:
+      repo_name: nubia-oci-local-prod
+      image_name: state-bridge-mainnet
+      platforms: "linux/amd64"
+      ignore_trivy: true
+      context: ./state_bridge_service
+      dockerfile_path: ./state_bridge_service/Dockerfile.mainnet
+      docker_build_args: |
+        GITHUB_SHA=${{ github.sha }}
+      push: false
+
+  release:
+    needs: [build-state-bridge-image-prod]
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    uses: ./.github/workflows/release-please.yaml
+    with:
+      release_type: simple
+
+  build-and-push-prod:
+    needs: [release]
+    if: ${{ !failure() && needs.release.outputs.releases_created == 'true' }}
+    uses: ./.github/workflows/build-and-push-prod.yaml
+    with:
+      version_tag: ${{ needs.release.outputs.tag_name }}
+
+  create-release:
+    needs: [release, build-and-push-prod]
+    if: ${{ !failure() && needs.release.outputs.releases_created == 'true' }}
+    uses: ./.github/workflows/create-release.yaml
+    with:
+      version_tag: ${{ needs.release.outputs.tag_name }}
+      release_name: ${{ needs.release.outputs.release_name }}
