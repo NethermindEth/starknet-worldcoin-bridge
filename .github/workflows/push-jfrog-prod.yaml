@@ -16,6 +16,7 @@ permissions:
   contents: write
   pull-requests: write
 
+jobs:
   build-state-bridge-image-prod:
     uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v2.0.0
     with:
