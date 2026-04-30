@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  build-state-bridge-image-prod:
+  push-state-bridge-image-prod:
   name: Build and Push State Bridge Image
   uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v2.0.0
   with:
@@ -27,4 +27,4 @@ jobs:
     additional_tags: ${{ inputs.version_tag }}
     docker_build_args: |
       GITHUB_SHA=${{ github.sha }}
-    push: false
+    push: true
