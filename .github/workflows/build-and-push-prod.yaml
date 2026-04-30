@@ -1,4 +1,4 @@
-name: Build and Push Prod Images
+name: Build and Push State Bridge Image on Prod
 
 on:
   workflow_call:
@@ -11,20 +11,21 @@ on:
 permissions:
   id-token: write
   attestations: write
+  artifact-metadata: write
   contents: read
 
 jobs:
   push-state-bridge-image-prod:
-  name: Build and Push State Bridge Image
-  uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v2.0.0
-  with:
-    repo_name: nubia-oci-local-prod
-    image_name: state-bridge-mainnet
-    platforms: "linux/amd64"
-    ignore_trivy: true
-    context: ./state_bridge_service
-    dockerfile_path: ./state_bridge_service/Dockerfile.mainnet
-    additional_tags: ${{ inputs.version_tag }}
-    docker_build_args: |
-      GITHUB_SHA=${{ github.sha }}
-    push: true
+    name: Build and Push State Bridge Image
+    uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v2.0.0
+    with:
+      repo_name: nubia-oci-local-prod
+      image_name: state-bridge-mainnet
+      platforms: "linux/amd64"
+      ignore_trivy: true
+      context: ./state_bridge_service
+      dockerfile_path: ./state_bridge_service/Dockerfile.mainnet
+      additional_tags: ${{ inputs.version_tag }}
+      docker_build_args: |
+        GITHUB_SHA=${{ github.sha }}
+      push: true
