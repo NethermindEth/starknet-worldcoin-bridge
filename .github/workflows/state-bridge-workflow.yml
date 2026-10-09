@@ -16,23 +16,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install Foundry 
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash
-          export PATH="$HOME/.config/.foundry/bin:$PATH"
-          foundryup
-
-      - name: Install scarb 2.8.2
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.11.4
+      - name: Install scarb
+        uses: software-mansion/setup-scarb@2a96b748888e3329ee44ac9ac073d930e692b3cd # v1.6.2
+        with:
+          scarb-version: "2.11.4"
 
       - name: Install Starknet Foundry
-        run: |
-          curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | bash
-          snfoundryup
-
-      - name: Set PATH environment variable
-        run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
+        uses: foundry-rs/setup-snfoundry@16e23ddd0e2845f38727c92f4b913a7b728cda9e # v6.0.0
+        with:
+          starknet-foundry-version: "0.44.0"
           
       - name: Check versions
         run: |
